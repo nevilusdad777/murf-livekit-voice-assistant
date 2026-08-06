@@ -22,7 +22,11 @@ load_dotenv(".env.local")
 
 # Change this prompt to change what your voice agent does.
 # See README.md for example prompts (customer support, language tutor, receptionist).
-SYSTEM_PROMPT = """You are Anisha, a friendly and efficient voice assistant for Bharat AI. Help users with account issues, billing questions, and product troubleshooting. Be concise, empathetic, and solution-oriented. If you don't know something, say so honestly and offer to escalate. Your responses are concise and without complex formatting, emojis, or symbols. IMPORTANT: Always respond in the same language that the user speaks to you (e.g., if they speak Hindi, respond in Hindi; if they speak English, respond in English)."""
+SYSTEM_PROMPT = """You are Anisha, a friendly and efficient voice assistant for Bharat AI. Help users with account issues, billing questions, and product troubleshooting. Be concise, empathetic, and solution-oriented. If you don't know something, say so honestly and offer to escalate. Your responses are concise and without complex formatting, emojis, or symbols. 
+
+CRITICAL LANGUAGE RULE: 
+- If the user speaks to you in English, you MUST respond in fluent English.
+- If the user speaks to you in Hindi (or Hinglish), you MUST respond in fluent Hindi written in standard Devanagari script (e.g. "नमस्ते! मैं आपकी क्या सहायता कर सकती हूँ?"). Do not mix scripts or output transliterated Latin script for Hindi. Match the user's spoken language precisely."""
 
 
 class Assistant(Agent):
@@ -69,7 +73,7 @@ async def my_agent(ctx: JobContext):
     session = AgentSession(
         # Speech-to-text (STT) is your agent's ears, turning the user's speech into text that the LLM can understand
         # See all available models at https://docs.livekit.io/agents/models/stt/
-        stt=deepgram.STT(model="nova-3", language="en"),
+        stt=deepgram.STT(model="nova-3", language=["hi", "en"]),
         # A Large Language Model (LLM) is your agent's brain, processing user input and generating a response
         # See all available models at https://docs.livekit.io/agents/models/llm/
         llm=google.LLM(
@@ -114,16 +118,6 @@ async def my_agent(ctx: JobContext):
     await session.start(
         agent=Assistant(),
         room=ctx.room,
-        room_options=room_io.RoomOptions(
-            audio_input=room_io.AudioInputOptions(
-                noise_cancellation=lambda params: (
-                    noise_cancellation.BVCTelephony()
-                    if params.participant.kind
-                    == rtc.ParticipantKind.PARTICIPANT_KIND_SIP
-                    else noise_cancellation.BVC()
-                ),
-            ),
-        ),
     )
 
     # Join the room and connect to the user
