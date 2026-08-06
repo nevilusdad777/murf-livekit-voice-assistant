@@ -28,7 +28,7 @@ if (Test-CommandExists "livekit-server") {
 # Force Windows console to UTF-8 to prevent Python UnicodeEncodeError crashes when printing Hindi
 chcp 65001 | Out-Null
 
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "chcp 65001 | Out-Null; Set-Location '$repoRoot\backend'; `$env:PYTHONUTF8=1; python -m uv run python src/agent.py dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "chcp 65001 | Out-Null; Set-Location '$repoRoot\backend'; `$env:PYTHONUTF8=1; `$env:PYTHONIOENCODING='utf-8'; python -m uv run python src/agent.py dev"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$repoRoot\frontend'; pnpm dev"
 
 Write-Host "Started backend and frontend in separate PowerShell windows."

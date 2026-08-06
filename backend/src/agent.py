@@ -127,14 +127,14 @@ async def my_agent(ctx: JobContext):
     # # Start the avatar and wait for it to join
     # await avatar.start(session, room=ctx.room)
 
-    # Join the room and connect to the user
-    await ctx.connect()
-
     # Start the session, which initializes the voice pipeline and warms up the models
     await session.start(
         agent=Assistant(),
         room=ctx.room,
     )
+
+    # Join the room and connect to the user
+    await ctx.connect()
 
     # Wait a moment for audio streams to settle before greeting
     import asyncio
