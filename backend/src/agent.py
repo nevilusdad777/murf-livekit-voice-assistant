@@ -1,5 +1,10 @@
 import sys
 import io
+import os
+
+if sys.platform == 'win32':
+    # Force Windows console to use UTF-8 code page (65001)
+    os.system("chcp 65001 >nul 2>&1")
 
 if sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
