@@ -56,9 +56,6 @@ server = AgentServer()
 
 def prewarm(proc: JobProcess):
     proc.userdata["vad"] = silero.VAD.load()
-    # Pre-load MultilingualModel to prevent connection delays
-    from livekit.plugins.turn_detector.multilingual import MultilingualModel
-    MultilingualModel.load()
 
 
 server.setup_fnc = prewarm
