@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 
 import { useTheme } from 'next-themes';
 import { AnimatePresence, motion } from 'motion/react';
@@ -35,6 +36,13 @@ interface ViewControllerProps {
 export function ViewController({ appConfig }: ViewControllerProps) {
   const { isConnected, start } = useSessionContext();
   const { resolvedTheme } = useTheme();
+  const [hasConnected, setHasConnected] = useState(false);
+
+  useEffect(() => {
+    if (isConnected) {
+      setHasConnected(true);
+    }
+  }, [isConnected]);
 
   return (
     <AnimatePresence mode="wait">
@@ -45,6 +53,7 @@ export function ViewController({ appConfig }: ViewControllerProps) {
           {...VIEW_MOTION_PROPS}
           startButtonText={appConfig.startButtonText}
           onStartCall={start}
+          hasConnected={hasConnected}
         />
       )}
       {/* Session view */}
@@ -69,7 +78,7 @@ export function ViewController({ appConfig }: ViewControllerProps) {
           audioVisualizerRadialBarCount={appConfig.audioVisualizerRadialBarCount}
           audioVisualizerRadialRadius={appConfig.audioVisualizerRadialRadius}
           audioVisualizerWaveLineWidth={appConfig.audioVisualizerWaveLineWidth}
-          className="fixed inset-0"
+          className="absolute inset-0"
         />
       )}
     </AnimatePresence>

@@ -92,7 +92,7 @@ export function Fade({ top = false, bottom = false, className }: FadeProps) {
   return (
     <div
       className={cn(
-        'from-background pointer-events-none h-4 bg-linear-to-b to-transparent',
+        'from-transparent pointer-events-none h-4 bg-linear-to-b to-transparent',
         top && 'bg-linear-to-b',
         bottom && 'bg-linear-to-t',
         className
@@ -177,7 +177,7 @@ export function AgentSessionView_01({
 }: React.ComponentProps<'section'> & AgentSessionView_01Props) {
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { state: agentState } = useAgent();
 
@@ -198,13 +198,37 @@ export function AgentSessionView_01({
     }
   }, [messages]);
 
+  const getStatusBadge = () => {
+    if (!session.isConnected) return null;
+    if (agentState === 'connecting') {
+      return { text: 'Connecting... / जुड़ रहा है...', color: 'bg-[#FFAE5C] text-black' };
+    }
+    if (agentState === 'speaking') {
+      return { text: 'Anisha is speaking... / अनीशा बोल रही है...', color: 'bg-green-600 text-white' };
+    }
+    if (agentState === 'listening') {
+      return { text: 'Listening to you... / सुन रही हूँ...', color: 'bg-blue-600 text-white' };
+    }
+    return null;
+  };
+  const status = getStatusBadge();
+
   return (
     <section
       ref={ref}
-      className={cn('bg-background relative z-10 h-full w-full overflow-hidden', className)}
+      className={cn('bg-transparent relative z-10 h-full w-full overflow-hidden', className)}
       {...props}
     >
       <Fade top className="absolute inset-x-4 top-0 z-10 h-40" />
+      
+      {status && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300">
+          <div className={`px-4 py-2 rounded-full text-sm font-semibold shadow-lg ${status.color}`}>
+            {status.text}
+          </div>
+        </div>
+      )}
+
       {/* transcript */}
 
       <div className="absolute top-0 bottom-[135px] flex w-full flex-col md:bottom-[170px]">
