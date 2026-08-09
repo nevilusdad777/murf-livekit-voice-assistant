@@ -31,9 +31,11 @@ const VIEW_MOTION_PROPS = {
 
 interface ViewControllerProps {
   appConfig: AppConfig;
+  userName: string;
+  onNameChange: (name: string) => void;
 }
 
-export function ViewController({ appConfig }: ViewControllerProps) {
+export function ViewController({ appConfig, userName, onNameChange }: ViewControllerProps) {
   const { isConnected, start } = useSessionContext();
   const { resolvedTheme } = useTheme();
   const [hasConnected, setHasConnected] = useState(false);
@@ -54,6 +56,8 @@ export function ViewController({ appConfig }: ViewControllerProps) {
           startButtonText={appConfig.startButtonText}
           onStartCall={start}
           hasConnected={hasConnected}
+          userName={userName}
+          onNameChange={onNameChange}
         />
       )}
       {/* Session view */}

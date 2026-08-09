@@ -134,7 +134,7 @@ export interface AgentSessionView_01Props {
   isPreConnectBufferEnabled?: boolean;
 
   /** Selects the visualizer style rendered in the main tile area. */
-  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
+  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura' | 'plasma';
   /** Primary hex color used by supported audio visualizer variants. */
   audioVisualizerColor?: `#${string}`;
   /** Hue shift intensity used by certain visualizers. */
@@ -221,9 +221,10 @@ export function AgentSessionView_01({
     >
       <Fade top className="absolute inset-x-4 top-0 z-10 h-40" />
       
+      {/* Status badge — sits BELOW the visualizer zone, above the transcript */}
       {status && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300">
-          <div className={`px-4 py-2 rounded-full text-sm font-semibold shadow-lg ${status.color}`}>
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className={`px-4 py-1.5 rounded-full text-xs font-semibold shadow-lg animate-pulse ${status.color}`}>
             {status.text}
           </div>
         </div>
@@ -231,7 +232,7 @@ export function AgentSessionView_01({
 
       {/* transcript */}
 
-      <div className="absolute top-0 bottom-[135px] flex w-full flex-col md:bottom-[170px]">
+      <div className="absolute top-28 bottom-[135px] flex w-full flex-col md:bottom-[170px]">
         <AnimatePresence>
           {chatOpen && (
             <motion.div

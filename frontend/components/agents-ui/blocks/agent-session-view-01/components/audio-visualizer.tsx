@@ -8,6 +8,7 @@ import { AgentAudioVisualizerBar } from '@/components/agents-ui/agent-audio-visu
 import { AgentAudioVisualizerGrid } from '@/components/agents-ui/agent-audio-visualizer-grid';
 import { AgentAudioVisualizerRadial } from '@/components/agents-ui/agent-audio-visualizer-radial';
 import { AgentAudioVisualizerWave } from '@/components/agents-ui/agent-audio-visualizer-wave';
+import { AgentAudioVisualizerPlasma } from '@/components/agents-ui/agent-audio-visualizer-plasma';
 import { cn } from '@/lib/shadcn/utils';
 
 const MotionAgentAudioVisualizerAura = motion.create(AgentAudioVisualizerAura);
@@ -18,7 +19,7 @@ const MotionAgentAudioVisualizerWave = motion.create(AgentAudioVisualizerWave);
 
 interface AudioVisualizerProps extends MotionProps {
   isChatOpen: boolean;
-  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
+  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura' | 'plasma';
   audioVisualizerColor?: `#${string}`;
   audioVisualizerColorShift?: number;
   audioVisualizerWaveLineWidth?: number;
@@ -47,6 +48,18 @@ export function AudioVisualizer({
   const { state, audioTrack } = useVoiceAssistant();
 
   switch (audioVisualizerType) {
+    case 'plasma': {
+      return (
+        <motion.div className={cn('size-[300px] md:size-[450px]', className)} {...props}>
+          <AgentAudioVisualizerPlasma
+            state={state}
+            audioTrack={audioTrack}
+            color={audioVisualizerColor}
+            className="w-full h-full"
+          />
+        </motion.div>
+      );
+    }
     case 'aura': {
       return (
         <MotionAgentAudioVisualizerAura

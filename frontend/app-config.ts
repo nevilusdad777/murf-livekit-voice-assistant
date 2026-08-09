@@ -14,7 +14,7 @@ export interface AppConfig {
   logoDark?: string;
   accentDark?: string;
 
-  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
+  audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura' | 'plasma';
   audioVisualizerColor?: `#${string}`;
   audioVisualizerColorDark?: `#${string}`;
   audioVisualizerColorShift?: number;
@@ -43,15 +43,15 @@ export const APP_CONFIG_DEFAULTS: AppConfig = {
   isPreConnectBufferEnabled: true,
 
   logo: '/murf-logo.svg',
-  accent: '#FF9933',
+  accent: '#8B5CF6',
   logoDark: '/murf-logo-dark.svg',
-  accentDark: '#FFAE5C',
+  accentDark: '#06B6D4',
   startButtonText: 'Start talking / बात करना शुरू करें',
 
   // optional: audio visualization configuration
-  audioVisualizerType: 'aura',
-  audioVisualizerColor: '#FF9933',
-  audioVisualizerColorDark: '#FFAE5C',
+  audioVisualizerType: 'plasma',
+  audioVisualizerColor: '#8B5CF6',
+  audioVisualizerColorDark: '#06B6D4',
 
   // agent dispatch configuration
   agentName: process.env.AGENT_NAME ?? undefined,

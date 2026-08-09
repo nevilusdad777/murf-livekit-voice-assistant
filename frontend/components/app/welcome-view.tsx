@@ -3,21 +3,21 @@ import { toast } from 'sonner';
 import { WarningIcon } from '@phosphor-icons/react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-function WelcomeImage() {
+function WelcomeWaveform() {
   return (
-    <svg
-      width="64"
-      height="64"
-      viewBox="0 0 64 64"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="text-[#FF9933] mb-4 size-16"
-    >
-      <path
-        d="M15 24V40C15 40.7957 14.6839 41.5587 14.1213 42.1213C13.5587 42.6839 12.7956 43 12 43C11.2044 43 10.4413 42.6839 9.87868 42.1213C9.31607 41.5587 9 40.7957 9 40V24C9 23.2044 9.31607 22.4413 9.87868 21.8787C10.4413 21.3161 11.2044 21 12 21C12.7956 21 13.5587 21.3161 14.1213 21.8787C14.6839 22.4413 15 23.2044 15 24ZM22 5C21.2044 5 20.4413 5.31607 19.8787 5.87868C19.3161 6.44129 19 7.20435 19 8V56C19 56.7957 19.3161 57.5587 19.8787 58.1213C20.4413 58.6839 21.2044 59 22 59C22.7956 59 23.5587 58.6839 24.1213 58.1213C24.6839 57.5587 25 56.7957 25 56V8C25 7.20435 24.6839 6.44129 24.1213 5.87868C23.5587 5.31607 22.7956 5 22 5ZM32 13C31.2044 13 30.4413 13.3161 29.8787 13.8787C29.3161 14.4413 29 15.2044 29 16V48C29 48.7957 29.3161 49.5587 29.8787 50.1213C30.4413 50.6839 31.2044 51 32 51C32.7956 51 33.5587 50.6839 34.1213 50.1213C34.6839 49.5587 35 48.7957 35 48V16C35 15.2044 34.6839 14.4413 34.1213 13.8787C33.5587 13.3161 32.7956 13 32 13ZM42 21C41.2043 21 40.4413 21.3161 39.8787 21.8787C39.3161 22.4413 39 23.2044 39 24V40C39 40.7957 39.3161 41.5587 39.8787 42.1213C40.4413 42.6839 41.2043 43 42 43C42.7957 43 43.5587 42.6839 44.1213 42.1213C44.6839 41.5587 45 40.7957 45 40V24C45 23.2044 44.6839 22.4413 44.1213 21.8787C43.5587 21.3161 42.7957 21 42 21ZM52 17C51.2043 17 50.4413 17.3161 49.8787 17.8787C49.3161 18.4413 49 19.2044 49 20V44C49 44.7957 49.3161 45.5587 49.8787 46.1213C50.4413 46.6839 51.2043 47 52 47C52.7957 47 53.5587 46.6839 54.1213 46.1213C54.6839 45.5587 55 44.7957 55 44V20C55 19.2044 54.6839 18.4413 54.1213 17.8787C53.5587 17.3161 52.7957 17 52 17Z"
-        fill="currentColor"
-      />
-    </svg>
+    <div className="flex items-center justify-center gap-1.5 h-16 mb-6">
+      {[...Array(6)].map((_, i) => (
+        <span
+          key={i}
+          className="w-1.5 rounded-full bg-gradient-to-t from-violet-500 to-indigo-400 animate-bounce"
+          style={{
+            height: `${24 + Math.sin(i) * 16}px`,
+            animationDelay: `${i * 0.15}s`,
+            animationDuration: '1.2s'
+          }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -25,12 +25,16 @@ interface WelcomeViewProps {
   startButtonText: string;
   onStartCall: () => void | Promise<void>;
   hasConnected?: boolean;
+  userName?: string;
+  onNameChange?: (name: string) => void;
 }
 
 export const WelcomeView = ({
   startButtonText,
   onStartCall,
   hasConnected,
+  userName = 'Guest',
+  onNameChange = () => {},
   ref,
 }: React.ComponentProps<'div'> & WelcomeViewProps) => {
 
@@ -49,33 +53,65 @@ export const WelcomeView = ({
               </AlertDescription>
             </Alert>
           ),
-          { duration: 10000 }
+          { duration: 8000 }
         );
       }
     }
   };
 
+  const isReturningUser = userName && userName !== 'Guest';
+
   return (
     <div ref={ref}>
-      <section className="bg-transparent flex flex-col items-center justify-center text-center w-full max-w-lg mx-auto p-12 rounded-3xl bg-white/40 dark:bg-slate-900/40 backdrop-blur-lg border border-white/50 dark:border-slate-800/50 shadow-2xl">
-        <WelcomeImage />
+      <section className="bg-transparent flex flex-col items-center justify-center text-center w-full max-w-lg mx-auto p-12 rounded-3xl bg-slate-900/60 backdrop-blur-xl border border-violet-500/20 shadow-2xl relative overflow-hidden group">
+        <div className="absolute -inset-px bg-gradient-to-br from-violet-500/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        
+        <WelcomeWaveform />
 
-        <p className="text-foreground max-w-prose pt-1 leading-6 font-medium">
-          {hasConnected ? (
-            <>
-              Call Ended <br/> <span className="text-muted-foreground text-sm font-normal">कॉल समाप्त हो गई</span>
-            </>
-          ) : (
-            <>
-              Chat live with Anisha <br/> <span className="text-muted-foreground text-sm font-normal">अनीशा से बात करें</span>
-            </>
-          )}
-        </p>
+        <div className="space-y-2 mb-6">
+          <p className="text-foreground max-w-prose pt-1 leading-7 font-bold text-lg">
+            {hasConnected ? (
+              <>
+                Call Ended <br/> 
+                <span className="text-muted-foreground text-sm font-normal">कॉल समाप्त हो गई</span>
+              </>
+            ) : (
+              <>
+                {isReturningUser ? (
+                  <>
+                    Welcome back, {userName}! <br/>
+                    <span className="text-violet-400 text-sm font-semibold">नमस्ते {userName}, दोबारा स्वागत है!</span>
+                  </>
+                ) : (
+                  <>
+                    Chat live with Anisha <br/> 
+                    <span className="text-muted-foreground text-sm font-normal">अनीशा से बात करें</span>
+                  </>
+                )}
+              </>
+            )}
+          </p>
+        </div>
+
+        {!hasConnected && !isReturningUser && (
+          <div className="mt-2 w-72 text-left mb-4">
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              Your Name / आपका नाम
+            </label>
+            <input
+              type="text"
+              value={userName === 'Guest' ? '' : userName}
+              onChange={(e) => onNameChange(e.target.value || 'Guest')}
+              className="w-full px-4 py-2 rounded-xl border border-violet-500/20 bg-slate-950/60 backdrop-blur-sm text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              placeholder="Enter your name"
+            />
+          </div>
+        )}
 
         <Button
           size="lg"
           onClick={handleStart}
-          className="mt-6 w-72 rounded-full font-mono text-xs font-bold tracking-wider uppercase bg-[#FF9933] hover:bg-[#FFAE5C] text-white"
+          className="mt-2 w-72 rounded-full font-sans text-xs font-bold tracking-wider uppercase bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-500/20 active:scale-[0.98] transition-all duration-200"
         >
           {hasConnected ? 'Start Again / फिर से शुरू करें' : startButtonText}
         </Button>

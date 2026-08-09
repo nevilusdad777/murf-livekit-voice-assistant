@@ -226,6 +226,18 @@ Murf Falcon and LiveKit handle audio format internally. For advanced options, se
 
 ---
 
+## Troubleshooting & Features
+
+### Windows Reconnection Fix
+On Windows systems, the `livekit-agents` inference executor subprocess IPC pipes can crash with `DuplexClosed` or `WinError 64` when a voice call session ends. This prevents subsequent calls from connecting to the agent because the worker gets flagged as unhealthy (HTTP 503). 
+
+We have programmatically bypassed this by clearing the registered inference runners (`_InferenceRunner.registered_runners.clear()`) on Windows before starting the `AgentServer`. This allows the agent to fallback to Voice Activity Detection (VAD) alone, running stably across multiple consecutive connections.
+
+### Custom Plasma/Neon Visualizer
+The starter is updated with a custom high-performance **Cybernetic Neon Plasma Visualizer** rendering circular energy hud segments and space-dust particle orbits that interact dynamically with the agent's real-time voice volume. If you need to revert or swap styles, configure `audioVisualizerType` in `frontend/app-config.ts`.
+
+---
+
 ## Project Structure
 
 ```
