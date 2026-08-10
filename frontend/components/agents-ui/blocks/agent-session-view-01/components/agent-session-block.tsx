@@ -189,6 +189,8 @@ export function AgentSessionView_01({
     screenShare: supportsScreenShare,
   };
 
+  const [liveRates, setLiveRates] = useState<any>(null);
+
   useEffect(() => {
     const lastMessage = messages.at(-1);
     const lastMessageIsLocal = lastMessage?.from?.isLocal === true;
@@ -197,6 +199,32 @@ export function AgentSessionView_01({
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Hook into LiveKit room's dataReceived event to capture the exchange rate pushes & forget user events
+  useEffect(() => {
+    const room = session.room;
+    if (!room) return;
+
+    const handleDataReceived = (payload: Uint8Array) => {
+      try {
+        const text = new TextDecoder().decode(payload);
+        const data = JSON.parse(text);
+        if (data.type === 'exchange_rates') {
+          setLiveRates(data);
+        } else if (data.type === 'forget_user') {
+          localStorage.removeItem('bharatpay_user_id');
+          localStorage.removeItem('bharatpay_user_name');
+        }
+      } catch (e) {
+        // Not a JSON or not exchange rate data
+      }
+    };
+
+    room.on('dataReceived', handleDataReceived);
+    return () => {
+      room.off('dataReceived', handleDataReceived);
+    };
+  }, [session.room]);
 
   const getStatusBadge = () => {
     if (!session.isConnected) return null;
@@ -229,6 +257,48 @@ export function AgentSessionView_01({
           </div>
         </div>
       )}
+
+      {/* Floating Live Currency Rates Card */}
+      <AnimatePresence>
+        {liveRates && (
+          <motion.div
+            initial={{ opacity: 0, x: -100, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -100, scale: 0.9 }}
+            className="absolute top-12 left-4 z-50 w-72 rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl md:top-24 md:left-6"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex h-2.5 w-2.5 rounded-full ${liveRates.fallback ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-pulse'}`} />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  {liveRates.fallback ? 'Cached Exchange Rates' : 'Live Exchange Rates'}
+                </h4>
+              </div>
+              <button
+                onClick={() => setLiveRates(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-white/5 hover:text-white"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mt-3 space-y-2">
+              {Object.entries(liveRates.rates).map(([currency, rate]: [string, any]) => (
+                <div key={currency} className="flex justify-between text-sm">
+                  <span className="font-semibold text-violet-400">1 {currency}</span>
+                  <span className="font-bold text-slate-100">₹{rate} INR</span>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-3 border-t border-white/5 pt-2 text-[10px] text-slate-500 text-right">
+              {liveRates.date}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* transcript */}
 

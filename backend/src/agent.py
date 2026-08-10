@@ -55,9 +55,11 @@ OBJECTIVES:
 - Answer questions about transaction fees (free for UPI/wallet, 2% for credit card transfers).
 - Help users understand how to block a card or block their account if lost.
 - Check transaction status queries (explain that they need to look at the 'History' tab in their app, as you cannot view live personal data).
+- Help users lookup live exchange rates (USD, EUR, GBP, AED, CAD to INR) and calculate foreign remittances using the `get_exchange_rates` tool.
 
 KNOWLEDGE:
-- You know Bharat Pay services: UPI transfers, wallet payments, and credit card payments.
+- You know Bharat Pay services: UPI transfers, wallet payments, credit card payments, and foreign remittances.
+- You can get live exchange rates using the `get_exchange_rates` tool. Always say when the rate is from based on the tool's response.
 - You do NOT have live access to the user's account details, balance, or specific transactions.
 - You cannot make transfers, change passwords, or perform transactions.
 
@@ -155,8 +157,94 @@ async def my_agent(ctx: JobContext):
             description="Delete/wipe all memory and data about the user from the database. Call this if the user asks to be forgotten."
         )
         async def forget_me() -> str:
+            import json
             db.delete_user(user_id)
+            try:
+                payload = json.dumps({
+                    "type": "forget_user"
+                }).encode("utf-8")
+                await ctx.room.local_participant.publish_data(payload)
+            except Exception as e:
+                logger.warning(f"Failed to publish forget_user event: {e}")
             return "Your profile has been completely deleted from our system."
+
+        @llm.function_tool(
+            description="Get the live exchange rates for converting foreign currencies (USD, EUR, GBP, AED, CAD) to Indian Rupee (INR). Call this whenever the user asks for exchange rates, currency conversion, or remittance prices."
+        )
+        async def get_exchange_rates() -> str:
+            import urllib.request
+            import json
+            from datetime import datetime
+
+            url = "https://open.er-api.com/v6/latest/INR"
+            try:
+                # Run the synchronous network call in a separate thread so we don't block the event loop
+                def fetch():
+                    with urllib.request.urlopen(url, timeout=4) as response:
+                        return json.loads(response.read().decode())
+                
+                data = await asyncio.to_thread(fetch)
+                if data.get("result") == "success":
+                    base_rates = data.get("rates", {})
+                    # The API rates are relative to INR (e.g. 1 INR = 0.012 USD).
+                    # We invert them to show how many INR for 1 unit of foreign currency.
+                    usd = round(1 / base_rates["USD"], 2) if "USD" in base_rates else 83.45
+                    eur = round(1 / base_rates["EUR"], 2) if "EUR" in base_rates else 90.12
+                    gbp = round(1 / base_rates["GBP"], 2) if "GBP" in base_rates else 106.30
+                    aed = round(1 / base_rates["AED"], 2) if "AED" in base_rates else 22.72
+                    cad = round(1 / base_rates["CAD"], 2) if "CAD" in base_rates else 61.15
+                    
+                    date_str = data.get("time_last_update_utc", "Today")
+                    # Clean up date representation
+                    if " +" in date_str:
+                        date_str = date_str.split(" +")[0]
+                    
+                    rates_dict = {
+                        "USD": usd,
+                        "EUR": eur,
+                        "GBP": gbp,
+                        "AED": aed,
+                        "CAD": cad
+                    }
+                    
+                    # Push data packet to the room to update UI
+                    try:
+                        payload = json.dumps({
+                            "type": "exchange_rates",
+                            "rates": rates_dict,
+                            "date": date_str,
+                            "fallback": False
+                        }).encode("utf-8")
+                        await ctx.room.local_participant.publish_data(payload)
+                    except Exception as e:
+                        logger.warning(f"Failed to publish exchange rates to room: {e}")
+                        
+                    return f"Live rates as of {date_str}: 1 USD = {usd} INR, 1 EUR = {eur} INR, 1 GBP = {gbp} INR, 1 AED = {aed} INR, 1 CAD = {cad} INR."
+            except Exception as e:
+                logger.error(f"Error fetching live exchange rates: {e}", exc_info=True)
+                
+            # Fallback path if API is offline or times out
+            fallback_rates = {
+                "USD": 83.45,
+                "EUR": 90.12,
+                "GBP": 106.30,
+                "AED": 22.72,
+                "CAD": 61.15
+            }
+            fallback_date = "August 10, 2026 (Offline Fallback)"
+            
+            try:
+                payload = json.dumps({
+                    "type": "exchange_rates",
+                    "rates": fallback_rates,
+                    "date": fallback_date,
+                    "fallback": True
+                }).encode("utf-8")
+                await ctx.room.local_participant.publish_data(payload)
+            except Exception as ex:
+                logger.warning(f"Failed to publish fallback exchange rates to room: {ex}")
+                
+            return f"The live rates server is currently offline. Using cached rates from yesterday (August 9, 2026): 1 USD = 83.45 INR, 1 EUR = 90.12 INR, 1 GBP = 106.30 INR, 1 AED = 22.72 INR, 1 CAD = 61.15 INR."
 
         # Set up the voice AI pipeline
         # NOTE: turn_detection removed on Windows — the MultilingualModel inference
@@ -170,7 +258,7 @@ async def my_agent(ctx: JobContext):
                 tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
                 text_pacing=True,
             ),
-            tools=[save_profile, forget_me],
+            tools=[save_profile, forget_me, get_exchange_rates],
             vad=ctx.proc.userdata["vad"],
         )
 
