@@ -265,7 +265,13 @@ async def my_agent(ctx: JobContext):
         # Compose greeting and instructions
         greeting_text = ""
         instructions = SYSTEM_PROMPT
-        if user_profile and user_profile.get("consent_given"):
+        
+        is_outbound = user_id.startswith("sip_")
+        if is_outbound:
+            # Regulatory outbound call greeting: who's calling, why, and how to opt out
+            greeting_text = "Hello, this is Anisha calling from Bharat Pay regarding your PM-SBY scheme renewal. You can reply 'stop' or hang up at any time to opt out."
+            instructions += "\nOUTBOUND CALL COMPLIANCE:\n- Identify yourself as Anisha from Bharat Pay.\n- Inform the user their PM-SBY scheme renewal deadline is approaching.\n- State clearly that they can reply 'stop' or hang up to opt out.\n- If they ask to stop or opt out, execute the `forget_me` tool immediately."
+        elif user_profile and user_profile.get("consent_given"):
             schemes = user_profile.get("schemes_checked") or "None"
             elig = user_profile.get("eligibility_status") or "None"
             instructions += f"\nRETURNING USER MEMORY:\n- User Name: {user_name}\n- Last checked schemes: {schemes}\n- Last eligibility: {elig}\n- Task: Greet them warmly by name, and follow up directly on their last query."
