@@ -89,6 +89,50 @@ MEMORY & CONSENT (CRITICAL):
 """
 
 
+import threading
+from http.server import SimpleHTTPRequestHandler, HTTPServer
+import json
+
+class TicketHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        super().end_headers()
+
+    def do_GET(self):
+        if self.path == '/tickets':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            try:
+                import db
+                with db.get_connection() as conn:
+                    rows = conn.execute("SELECT * FROM tickets ORDER BY created_at DESC").fetchall()
+                    tickets = [dict(r) for r in rows]
+                self.wfile.write(json.dumps(tickets).encode('utf-8'))
+            except Exception as e:
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, format, *args):
+        # Mute logging to keep console clean
+        pass
+
+def start_http_server():
+    try:
+        server = HTTPServer(('127.0.0.1', 8085), TicketHandler)
+        server.serve_forever()
+    except Exception as e:
+        pass
+
+# Start daemon thread immediately
+api_thread = threading.Thread(target=start_http_server, daemon=True)
+api_thread.start()
+
+
 class Assistant(Agent):
     def __init__(self, instructions: str) -> None:
         super().__init__(instructions=instructions)
@@ -99,36 +143,6 @@ server = AgentServer()
 
 def prewarm(proc: JobProcess):
     proc.userdata["vad"] = silero.VAD.load()
-    
-    # Start the local aiohttp ticket API server in the background on port 8085
-    from aiohttp import web
-    
-    async def run_api():
-        app = web.Application()
-        
-        async def handle_tickets(request):
-            import db
-            try:
-                with db.get_connection() as conn:
-                    rows = conn.execute("SELECT * FROM tickets ORDER BY created_at DESC").fetchall()
-                    tickets = [dict(r) for r in rows]
-                return web.json_response(tickets, headers={
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "GET",
-                    "Access-Control-Allow-Headers": "Content-Type"
-                })
-            except Exception as e:
-                return web.json_response({"error": str(e)}, headers={"Access-Control-Allow-Origin": "*"})
-                
-        app.router.add_get('/tickets', handle_tickets)
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, 'localhost', 8085)
-        await site.start()
-        logger.info("🚀 Local Ticket API server running on http://localhost:8085/tickets")
-        
-    loop = asyncio.get_event_loop()
-    loop.create_task(run_api())
 
 
 server.setup_fnc = prewarm
