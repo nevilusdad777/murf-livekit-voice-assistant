@@ -200,6 +200,8 @@ export function AgentSessionView_01({
     }
   }, [messages]);
 
+  const [tickets, setTickets] = useState<any[]>([]);
+
   // Hook into LiveKit room's dataReceived event to capture the exchange rate pushes & forget user events
   useEffect(() => {
     const room = session.room;
@@ -214,6 +216,8 @@ export function AgentSessionView_01({
         } else if (data.type === 'forget_user') {
           localStorage.removeItem('bharatpay_user_id');
           localStorage.removeItem('bharatpay_user_name');
+        } else if (data.type === 'ticket_created') {
+          setTickets((prev) => [data, ...prev]);
         }
       } catch (e) {
         // Not a JSON or not exchange rate data
@@ -295,6 +299,61 @@ export function AgentSessionView_01({
             
             <div className="mt-3 border-t border-white/5 pt-2 text-[10px] text-slate-500 text-right">
               {liveRates.date}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Support Tickets Card */}
+      <AnimatePresence>
+        {tickets.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, x: 100, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 100, scale: 0.9 }}
+            className="absolute top-12 right-4 z-50 w-80 rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl md:top-24 md:right-6"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-violet-500 animate-pulse" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Escalated Tickets ({tickets.length})
+                </h4>
+              </div>
+              <button
+                onClick={() => setTickets([])}
+                className="rounded-lg p-1 text-slate-400 hover:bg-white/5 hover:text-white"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mt-3 max-h-60 overflow-y-auto space-y-3 pr-1">
+              {tickets.map((ticket, index) => {
+                const urgencyColors: any = {
+                  Low: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+                  Medium: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                  High: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+                  Emergency: 'bg-red-500/20 text-red-400 border-red-500/30'
+                };
+                return (
+                  <div key={index} className="p-2.5 rounded-xl border border-white/5 bg-white/5 space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono text-xs font-bold text-violet-400">{ticket.ticket_id}</span>
+                      <span className={cn("text-[9px] px-2 py-0.5 rounded-full border font-semibold", urgencyColors[ticket.urgency] || 'bg-slate-500/20')}>
+                        {ticket.urgency}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-200 line-clamp-2">{ticket.summary}</p>
+                    <div className="flex justify-between items-center text-[9px] text-slate-500">
+                      <span>Followup: {ticket.followup_method}</span>
+                      <span>{ticket.date}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         )}

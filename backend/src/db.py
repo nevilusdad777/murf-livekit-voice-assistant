@@ -23,6 +23,19 @@ def init_db():
                 last_interaction TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS tickets (
+                ticket_id TEXT PRIMARY KEY,
+                user_id TEXT,
+                user_name TEXT,
+                summary TEXT,
+                urgency TEXT,
+                language TEXT,
+                followup_method TEXT,
+                status TEXT DEFAULT 'Open',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
 
 def get_user(user_id):
@@ -57,6 +70,14 @@ def save_user(user_id, name, language_preference, schemes_checked, eligibility_s
 def delete_user(user_id):
     with get_connection() as conn:
         conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+        conn.commit()
+
+def create_ticket(ticket_id, user_id, user_name, summary, urgency, language, followup_method):
+    with get_connection() as conn:
+        conn.execute("""
+            INSERT INTO tickets (ticket_id, user_id, user_name, summary, urgency, language, followup_method)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (ticket_id, user_id, user_name, summary, urgency, language, followup_method))
         conn.commit()
 
 # Initialize on import

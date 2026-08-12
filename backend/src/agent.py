@@ -75,6 +75,12 @@ GUARDRAILS (CRITICAL):
 - Never perform money transfers.
 - Escalation Script: If the user insists on actions you cannot perform (like money transfers, live balance checks, or resetting passwords), say: "सुरक्षा कारणों से, मुझे आपको एक सीनियर अधिकारी के पास ट्रांसफर करना होगा। कृपया लाइन पर बने रहें।" (or in English: "For security reasons, I must transfer you to a human supervisor. Please hold.")
 
+HUMAN ESCALATION (CRITICAL):
+- If the caller reports **suspected fraud** (e.g. lost card, stolen account) or needs a **limit decision/dispute** you cannot make, you must escalate to a human.
+- Before escalating, you **MUST explicitly ask the caller for permission** to create a ticket with their details. Example: "May I create a support ticket with your details to have a supervisor review this?"
+- Only call the `create_escalation` tool if they say YES. If they refuse, do NOT call the tool and say you cannot proceed.
+- Map urgency accurately: Fraud/stolen card = "Emergency" or "High". Disputing charges or queries = "Medium" or "Low".
+
 MEMORY & CONSENT (CRITICAL):
 - Before saving any details (like checked schemes or queries), you must explicitly ask the user for permission. For example: "May I save your name and query details to assist you next time?" or "क्या मैं अगली बार आपकी सहायता के लिए आपका नाम और जानकारी सुरक्षित रख सकती हूँ?"
 - If the user grants consent, call the `save_profile` tool with `consent_given=True`.
@@ -246,6 +252,76 @@ async def my_agent(ctx: JobContext):
                 
             return f"The live rates server is currently offline. Using cached rates from yesterday (August 9, 2026): 1 USD = 83.45 INR, 1 EUR = 90.12 INR, 1 GBP = 106.30 INR, 1 AED = 22.72 INR, 1 CAD = 61.15 INR."
 
+        @llm.function_tool(
+            description="Create a human escalation request when the user reports potential fraud, requires a decision the agent cannot make (like loan/account disputes), or asks to speak with a human supervisor. Do NOT call this tool unless the user has explicitly given permission first."
+        )
+        async def create_escalation(
+            summary: str,
+            urgency: str, # 'Low', 'Medium', 'High', 'Emergency'
+            followup_method: str, # 'Phone Call', 'Email', 'App Notification'
+        ) -> str:
+            import random
+            from datetime import datetime
+            ticket_id = f"BP-{random.randint(1000, 9999)}"
+            
+            # Write to local SQLite database
+            db.create_ticket(
+                ticket_id=ticket_id,
+                user_id=user_id,
+                user_name=user_name,
+                summary=summary,
+                urgency=urgency,
+                language="English",
+                followup_method=followup_method
+            )
+            
+            # Broadcast LiveKit data packet
+            ticket_data = {
+                "type": "ticket_created",
+                "ticket_id": ticket_id,
+                "user_name": user_name,
+                "summary": summary,
+                "urgency": urgency,
+                "followup_method": followup_method,
+                "status": "Open",
+                "date": datetime.now().strftime("%I:%M %p")
+            }
+            try:
+                payload = json.dumps(ticket_data).encode("utf-8")
+                await ctx.room.local_participant.publish_data(payload)
+            except Exception as e:
+                logger.warning(f"Failed to publish ticket packet: {e}")
+                
+            # Send to Discord Webhook if configured
+            webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
+            if webhook_url:
+                try:
+                    import urllib.request
+                    discord_payload = {
+                        "embeds": [{
+                            "title": "🚨 New Escalation: Human Help Required",
+                            "color": 16711680 if urgency in ["High", "Emergency"] else 65280,
+                            "fields": [
+                                {"name": "Ticket ID", "value": ticket_id, "inline": True},
+                                {"name": "User Name", "value": user_name, "inline": True},
+                                {"name": "Urgency", "value": urgency, "inline": True},
+                                {"name": "Followup Method", "value": followup_method, "inline": True},
+                                {"name": "Summary", "value": summary}
+                            ],
+                            "footer": {"text": "Bharat Pay Voice Assistant"}
+                        }]
+                    }
+                    req = urllib.request.Request(
+                        webhook_url,
+                        data=json.dumps(discord_payload).encode("utf-8"),
+                        headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+                    )
+                    await asyncio.to_thread(urllib.request.urlopen, req)
+                except Exception as ex:
+                    logger.warning(f"Failed to post to Discord webhook: {ex}")
+                    
+            return f"Successfully created ticket {ticket_id}. Explain to the user that their support ticket has been registered, and give them the Reference ID: {ticket_id}."
+
         # Set up the voice AI pipeline
         # NOTE: turn_detection removed on Windows — the MultilingualModel inference
         # runner uses a subprocess IPC pipe that crashes. VAD alone handles turns.
@@ -258,7 +334,7 @@ async def my_agent(ctx: JobContext):
                 tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
                 text_pacing=True,
             ),
-            tools=[save_profile, forget_me, get_exchange_rates],
+            tools=[save_profile, forget_me, get_exchange_rates, create_escalation],
             vad=ctx.proc.userdata["vad"],
         )
 
