@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, type MotionProps, motion } from 'motion/react';
-import { useAgent, useSessionContext, useSessionMessages } from '@livekit/components-react';
+import { useAgent, useSessionContext, useSessionMessages, useChat } from '@livekit/components-react';
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
 import {
   AgentControlBar,
@@ -190,6 +190,21 @@ export function AgentSessionView_01({
   };
 
   const [liveRates, setLiveRates] = useState<any>(null);
+  const { send } = useChat();
+
+  const handleAction = async (prompt: string) => {
+    try {
+      await send(prompt);
+    } catch (e) {
+      // Catch empty/send errors
+    }
+  };
+
+  const actions = [
+    { title: 'Check Fees', desc: 'UPI & Card charges', prompt: 'What are the transaction charges for UPI and Credit Cards?' },
+    { title: 'Report Lost Card', desc: 'Securely block card', prompt: 'I want to block my card because I lost it.' },
+    { title: 'UPI Support', desc: 'Failed transfers help', prompt: 'My UPI transaction failed but money got debited.' }
+  ];
 
   useEffect(() => {
     const lastMessage = messages.at(-1);
@@ -354,6 +369,46 @@ export function AgentSessionView_01({
                   </div>
                 );
               })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Quick Actions & Security Panel */}
+      <AnimatePresence>
+        {session.isConnected && (
+          <motion.div
+            initial={{ opacity: 0, x: -100, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -100, scale: 0.9 }}
+            className="absolute top-80 left-4 z-50 w-72 rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl md:top-96 md:left-6"
+          >
+            {/* Security Shield Banner */}
+            <div className="mb-4 p-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-[10px] font-bold text-slate-300">Security Shield Active</span>
+              </div>
+              <svg className="h-4.5 w-4.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+
+            <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2.5">Quick Actions</h4>
+            <div className="space-y-2">
+              {actions.map((action, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleAction(action.prompt)}
+                  className="w-full text-left p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/20 hover:bg-violet-500/5 active:scale-[0.98] transition-all"
+                >
+                  <h5 className="text-[11px] font-bold text-slate-200">{action.title}</h5>
+                  <p className="text-[9px] text-slate-500 mt-0.5">{action.desc}</p>
+                </button>
+              ))}
             </div>
           </motion.div>
         )}
