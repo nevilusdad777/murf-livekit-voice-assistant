@@ -13,6 +13,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { useAgentErrors } from '@/hooks/useAgentErrors';
 import { useDebugMode } from '@/hooks/useDebug';
 import { getSandboxTokenSource } from '@/lib/utils';
+import { cn } from '@/lib/shadcn/utils';
 
 const IN_DEVELOPMENT = process.env.NODE_ENV !== 'production';
 
