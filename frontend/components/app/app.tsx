@@ -223,7 +223,7 @@ export function App({ appConfig }: AppProps) {
         <DashboardSidebar companyName={appConfig.companyName} />
 
         {/* Main Content (Agent) */}
-        <div className="flex-1 h-full relative flex flex-col items-center justify-center">
+        <div className={cn("flex-1 h-full relative flex flex-col items-center", !session.isConnected ? "overflow-y-auto py-8" : "justify-center overflow-hidden")}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-violet-500/10 via-transparent to-transparent pointer-events-none" />
           <ViewController 
             appConfig={appConfig} 
