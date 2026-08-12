@@ -99,6 +99,36 @@ server = AgentServer()
 
 def prewarm(proc: JobProcess):
     proc.userdata["vad"] = silero.VAD.load()
+    
+    # Start the local aiohttp ticket API server in the background on port 8085
+    from aiohttp import web
+    
+    async def run_api():
+        app = web.Application()
+        
+        async def handle_tickets(request):
+            import db
+            try:
+                with db.get_connection() as conn:
+                    rows = conn.execute("SELECT * FROM tickets ORDER BY created_at DESC").fetchall()
+                    tickets = [dict(r) for r in rows]
+                return web.json_response(tickets, headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET",
+                    "Access-Control-Allow-Headers": "Content-Type"
+                })
+            except Exception as e:
+                return web.json_response({"error": str(e)}, headers={"Access-Control-Allow-Origin": "*"})
+                
+        app.router.add_get('/tickets', handle_tickets)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, 'localhost', 8085)
+        await site.start()
+        logger.info("🚀 Local Ticket API server running on http://localhost:8085/tickets")
+        
+    loop = asyncio.get_event_loop()
+    loop.create_task(run_api())
 
 
 server.setup_fnc = prewarm
