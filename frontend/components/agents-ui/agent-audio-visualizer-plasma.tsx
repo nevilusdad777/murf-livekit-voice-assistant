@@ -58,7 +58,7 @@ export function AgentAudioVisualizerPlasma({
 
     let audioCtx: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
-    let buffer: Uint8Array | null = null;
+    let buffer: Uint8Array<ArrayBuffer> | null = null;
 
     if (audioTrackObj && typeof window !== 'undefined') {
       try {

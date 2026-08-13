@@ -247,11 +247,11 @@ export function App({ appConfig }: AppProps) {
   }, []);
 
   const tokenSource = useMemo(() => {
-    if (!userId) return null;
+    const effectiveUserId = userId || 'user_guest';
     return typeof process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT === 'string'
       ? getSandboxTokenSource(appConfig)
       : TokenSource.endpoint(
-          `/api/token?userId=${userId}&userName=${encodeURIComponent(userName)}`
+          `/api/token?userId=${effectiveUserId}&userName=${encodeURIComponent(userName)}`
         );
   }, [appConfig, userId, userName]);
 

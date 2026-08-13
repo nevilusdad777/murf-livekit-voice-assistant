@@ -30,7 +30,7 @@ interface CallAnalyticsGraphProps {
 const COLORS = ['#10B981', '#F43F5E', '#F59E0B', '#6366F1'];
 
 export default function CallAnalyticsGraph({ analytics }: CallAnalyticsGraphProps) {
-  const [activeTab, setActiveTab] = useState<'all' | 'trend' | 'outcomes'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'trend' | 'daily'>('all');
 
   const total = analytics?.total || 0;
   const successful = analytics?.successful || 0;
@@ -66,13 +66,31 @@ export default function CallAnalyticsGraph({ analytics }: CallAnalyticsGraphProp
             Failed: call.outcome === 'Failed' ? 1 : 0,
             duration: call.duration || 0,
             channel: call.channel || 'Web',
+            date: call.start_time
+              ? new Date(call.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              : 'Unknown',
           }))
       : [
-          { callNum: '#1', id: 'Call 1', Success: 1, Failed: 0, duration: 18, channel: 'Web' },
-          { callNum: '#2', id: 'Call 2', Success: 1, Failed: 0, duration: 24, channel: 'Web' },
-          { callNum: '#3', id: 'Call 3', Success: 0, Failed: 1, duration: 12, channel: 'SIP' },
-          { callNum: '#4', id: 'Call 4', Success: 1, Failed: 0, duration: 31, channel: 'Web' },
+          { callNum: '#1', id: 'Call 1', Success: 1, Failed: 0, duration: 18, channel: 'Web', date: 'Today' },
+          { callNum: '#2', id: 'Call 2', Success: 1, Failed: 0, duration: 24, channel: 'Web', date: 'Today' },
+          { callNum: '#3', id: 'Call 3', Success: 0, Failed: 1, duration: 12, channel: 'SIP', date: 'Today' },
+          { callNum: '#4', id: 'Call 4', Success: 1, Failed: 0, duration: 31, channel: 'Web', date: 'Today' },
         ];
+
+  // Daily aggregation: group calls by day, sum success/failed counts
+  const dailyMap = new Map<string, { date: string; Success: number; Failed: number; Total: number }>();
+  for (const call of trendData) {
+    const key = call.date;
+    const existing = dailyMap.get(key);
+    if (existing) {
+      existing.Success += call.Success;
+      existing.Failed += call.Failed;
+      existing.Total += 1;
+    } else {
+      dailyMap.set(key, { date: key, Success: call.Success, Failed: call.Failed, Total: 1 });
+    }
+  }
+  const dailyData = Array.from(dailyMap.values());
 
   // Failure reasons data
   const reasons = analytics?.reasons || { Incomplete: 1, Declined: 0, 'Security Violation': 0 };
@@ -124,14 +142,14 @@ export default function CallAnalyticsGraph({ analytics }: CallAnalyticsGraphProp
             Overview
           </button>
           <button
-            onClick={() => setActiveTab('outcomes')}
+            onClick={() => setActiveTab('daily')}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-              activeTab === 'outcomes'
+              activeTab === 'daily'
                 ? 'bg-violet-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Pie Distribution
+            Daily Summary
           </button>
           <button
             onClick={() => setActiveTab('trend')}
@@ -147,7 +165,7 @@ export default function CallAnalyticsGraph({ analytics }: CallAnalyticsGraphProp
       </div>
 
       {/* Main Charts Grid */}
-      {(activeTab === 'all' || activeTab === 'outcomes') && (
+      {(activeTab === 'all' || activeTab === 'daily') && (
         <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-2">
           {/* Donut Chart: Successful vs Failed Calls Proportions */}
           <div className="flex flex-col items-center justify-center space-y-2 rounded-xl border border-white/5 bg-slate-900/40 p-4">
@@ -196,15 +214,15 @@ export default function CallAnalyticsGraph({ analytics }: CallAnalyticsGraphProp
             </div>
           </div>
 
-          {/* Call Outcome History Stacked Bar Chart */}
+          {/* Daily Success vs Failed Bar Chart */}
           <div className="flex flex-col justify-between space-y-2 rounded-xl border border-white/5 bg-slate-900/40 p-4">
             <h4 className="text-xs font-bold tracking-wider text-slate-300 uppercase">
-              📊 Per-Call Outcome Bar Comparison
+              📅 Daily Success / Failure Calls
             </h4>
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={trendData}>
-                  <XAxis dataKey="callNum" stroke="#64748b" fontSize={11} />
+                <BarChart data={dailyData}>
+                  <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
                   <YAxis stroke="#64748b" fontSize={11} allowDecimals={false} />
                   <Tooltip
                     contentStyle={{
@@ -217,11 +235,11 @@ export default function CallAnalyticsGraph({ analytics }: CallAnalyticsGraphProp
                   <Legend verticalAlign="bottom" height={36} />
                   <Bar
                     dataKey="Success"
-                    name="Successful Call"
+                    name="Successful Calls"
                     fill="#10B981"
                     radius={[4, 4, 0, 0]}
                   />
-                  <Bar dataKey="Failed" name="Failed Call" fill="#F43F5E" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Failed" name="Failed Calls" fill="#F43F5E" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
