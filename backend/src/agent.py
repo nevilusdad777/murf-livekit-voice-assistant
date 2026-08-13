@@ -485,60 +485,55 @@ async def my_agent(ctx: JobContext):
         await asyncio.sleep(1)
         await session.say(greeting_text, allow_interruptions=True)
 
-        # Block until the room is disconnected to keep the try-block open
-        disconnect_event = asyncio.Event()
-        @ctx.room.on("disconnected")
-        def on_disconnected():
-            disconnect_event.set()
-        await disconnect_event.wait()
+        # Register close callback to save call analytics directly when the session ends
+        @session.on("close")
+        def on_session_close(*args, **kwargs):
+            end_time_dt = datetime.now()
+            end_time_str = end_time_dt.isoformat()
+            duration = int((end_time_dt - start_time_dt).total_seconds())
+            channel = "SIP" if user_id.startswith("sip_") else "Web"
+            
+            actions_list = []
+            if checked_rates:
+                actions_list.append("Checked Rates")
+            if saved_profile:
+                actions_list.append("Saved Profile")
+            if escalated:
+                actions_list.append("Escalated")
+            actions_taken = ", ".join(actions_list) if actions_list else "None"
+            
+            if security_violation:
+                outcome = "Failed"
+                failure_reason = "Security Violation"
+            elif declined_consent:
+                outcome = "Failed"
+                failure_reason = "Declined"
+            elif checked_rates or saved_profile or escalated:
+                outcome = "Success"
+                failure_reason = "None"
+            else:
+                outcome = "Failed"
+                failure_reason = "Incomplete"
+                
+            try:
+                import db
+                db.create_call(
+                    call_id=call_id,
+                    user_name=user_name,
+                    start_time=start_time_str,
+                    end_time=end_time_str,
+                    duration=duration,
+                    channel=channel,
+                    outcome=outcome,
+                    failure_reason=failure_reason,
+                    actions_taken=actions_taken
+                )
+                logger.info(f"💾 Call record successfully saved to SQLite on close: CallID={call_id}, Outcome={outcome}, Reason={failure_reason}")
+            except Exception as ex:
+                logger.error(f"Failed to record call in SQLite: {ex}")
 
     except Exception as e:
         logger.error(f"Agent session error: {e}", exc_info=True)
-    finally:
-        # Compute duration and log call outcomes to SQLite on session close
-        end_time_dt = datetime.now()
-        end_time_str = end_time_dt.isoformat()
-        duration = int((end_time_dt - start_time_dt).total_seconds())
-        channel = "SIP" if user_id.startswith("sip_") else "Web"
-        
-        actions_list = []
-        if checked_rates:
-            actions_list.append("Checked Rates")
-        if saved_profile:
-            actions_list.append("Saved Profile")
-        if escalated:
-            actions_list.append("Escalated")
-        actions_taken = ", ".join(actions_list) if actions_list else "None"
-        
-        if security_violation:
-            outcome = "Failed"
-            failure_reason = "Security Violation"
-        elif declined_consent:
-            outcome = "Failed"
-            failure_reason = "Declined"
-        elif checked_rates or saved_profile or escalated:
-            outcome = "Success"
-            failure_reason = "None"
-        else:
-            outcome = "Failed"
-            failure_reason = "Incomplete"
-            
-        try:
-            import db
-            db.create_call(
-                call_id=call_id,
-                user_name=user_name,
-                start_time=start_time_str,
-                end_time=end_time_str,
-                duration=duration,
-                channel=channel,
-                outcome=outcome,
-                failure_reason=failure_reason,
-                actions_taken=actions_taken
-            )
-            logger.info(f"💾 Call record successfully saved to SQLite: CallID={call_id}, Outcome={outcome}, Reason={failure_reason}")
-        except Exception as ex:
-            logger.error(f"Failed to record call in SQLite: {ex}")
 
 
 if __name__ == "__main__":
