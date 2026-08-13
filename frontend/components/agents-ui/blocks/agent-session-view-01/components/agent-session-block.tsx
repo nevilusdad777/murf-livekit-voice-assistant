@@ -299,54 +299,109 @@ export function AgentSessionView_01({
         </div>
       )}
 
-      {/* Floating Live Currency Rates Card */}
-      <AnimatePresence>
-        {liveRates && (
-          <motion.div
-            initial={{ opacity: 0, x: -100, scale: 0.9 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -100, scale: 0.9 }}
-            className="absolute top-12 left-4 z-50 w-72 rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl md:top-24 md:left-6"
-          >
-            <div className="flex items-center justify-between border-b border-white/10 pb-2">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`inline-flex h-2.5 w-2.5 rounded-full ${liveRates.fallback ? 'animate-pulse bg-amber-500' : 'animate-pulse bg-emerald-500'}`}
-                />
-                <h4 className="text-xs font-bold tracking-wider text-slate-300 uppercase">
-                  {liveRates.fallback ? 'Cached Exchange Rates' : 'Live Exchange Rates'}
-                </h4>
+      {/* Floating Left Side Column: Unified Exchange Rates & Quick Actions (prevent overlapping controls) */}
+      <div className="absolute top-16 left-4 bottom-32 z-40 flex w-72 flex-col gap-4 overflow-y-auto pointer-events-none md:top-24 md:left-6 scrollbar-none">
+        {/* Floating Live Currency Rates Card */}
+        <AnimatePresence>
+          {liveRates && (
+            <motion.div
+              initial={{ opacity: 0, x: -100, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: -100, scale: 0.9 }}
+              className="pointer-events-auto w-full rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex h-2.5 w-2.5 rounded-full ${liveRates.fallback ? 'animate-pulse bg-amber-500' : 'animate-pulse bg-emerald-500'}`}
+                  />
+                  <h4 className="text-xs font-bold tracking-wider text-slate-300 uppercase">
+                    {liveRates.fallback ? 'Cached Exchange Rates' : 'Live Exchange Rates'}
+                  </h4>
+                </div>
+                <button
+                  onClick={() => setLiveRates(null)}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-white/5 hover:text-white"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
               </div>
-              <button
-                onClick={() => setLiveRates(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-white/5 hover:text-white"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+
+              <div className="mt-3 space-y-2">
+                {Object.entries(liveRates.rates).map(([currency, rate]: [string, any]) => (
+                  <div key={currency} className="flex justify-between text-sm">
+                    <span className="font-semibold text-violet-400">1 {currency}</span>
+                    <span className="font-bold text-slate-100">₹{rate} INR</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-3 border-t border-white/5 pt-2 text-right text-[10px] text-slate-500">
+                {liveRates.date}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Floating Quick Actions & Security Panel */}
+        <AnimatePresence>
+          {session.isConnected && (
+            <motion.div
+              initial={{ opacity: 0, x: -100, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: -100, scale: 0.9 }}
+              className="pointer-events-auto w-full rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl"
+            >
+              {/* Security Shield Banner */}
+              <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-300">Security Shield Active</span>
+                </div>
+                <svg
+                  className="h-4.5 w-4.5 text-emerald-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
+                    strokeWidth={2.5}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                   />
                 </svg>
-              </button>
-            </div>
+              </div>
 
-            <div className="mt-3 space-y-2">
-              {Object.entries(liveRates.rates).map(([currency, rate]: [string, any]) => (
-                <div key={currency} className="flex justify-between text-sm">
-                  <span className="font-semibold text-violet-400">1 {currency}</span>
-                  <span className="font-bold text-slate-100">₹{rate} INR</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-3 border-t border-white/5 pt-2 text-right text-[10px] text-slate-500">
-              {liveRates.date}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <h4 className="mb-2.5 text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">
+                Quick Actions
+              </h4>
+              <div className="space-y-2">
+                {actions.map((action, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleAction(action.prompt)}
+                    className="w-full rounded-xl border border-white/5 bg-white/5 p-2.5 text-left transition-all hover:border-violet-500/20 hover:bg-violet-500/5 active:scale-[0.98]"
+                  >
+                    <h5 className="text-[11px] font-bold text-slate-200">{action.title}</h5>
+                    <p className="mt-0.5 text-[9px] text-slate-500">{action.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Floating Support Tickets Card */}
       <AnimatePresence>
@@ -418,57 +473,7 @@ export function AgentSessionView_01({
         )}
       </AnimatePresence>
 
-      {/* Floating Quick Actions & Security Panel */}
-      <AnimatePresence>
-        {session.isConnected && (
-          <motion.div
-            initial={{ opacity: 0, x: -100, scale: 0.9 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -100, scale: 0.9 }}
-            className="absolute top-80 left-4 z-50 w-72 rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl md:top-96 md:left-6"
-          >
-            {/* Security Shield Banner */}
-            <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-2.5">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                </span>
-                <span className="text-[10px] font-bold text-slate-300">Security Shield Active</span>
-              </div>
-              <svg
-                className="h-4.5 w-4.5 text-emerald-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2.5}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-            </div>
 
-            <h4 className="mb-2.5 text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">
-              Quick Actions
-            </h4>
-            <div className="space-y-2">
-              {actions.map((action, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleAction(action.prompt)}
-                  className="w-full rounded-xl border border-white/5 bg-white/5 p-2.5 text-left transition-all hover:border-violet-500/20 hover:bg-violet-500/5 active:scale-[0.98]"
-                >
-                  <h5 className="text-[11px] font-bold text-slate-200">{action.title}</h5>
-                  <p className="mt-0.5 text-[9px] text-slate-500">{action.desc}</p>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* transcript */}
 

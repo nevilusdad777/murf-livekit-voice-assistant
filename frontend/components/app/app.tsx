@@ -228,10 +228,12 @@ interface AppProps {
 }
 
 export function App({ appConfig }: AppProps) {
+  const [mounted, setMounted] = useState(false);
   const [userId, setUserId] = useState<string>('');
   const [userName, setUserName] = useState<string>('Guest');
 
   useEffect(() => {
+    setMounted(true);
     let id = localStorage.getItem('bharatpay_user_id');
     if (!id) {
       id = 'user_' + Math.random().toString(36).substring(2, 11);
@@ -265,7 +267,7 @@ export function App({ appConfig }: AppProps) {
     localStorage.setItem('bharatpay_user_name', newName);
   };
 
-  if (!userId) return null; // Hydration guard
+  if (!mounted || !userId) return null; // Hydration guard
 
   return (
     <AgentSessionProvider session={session}>
