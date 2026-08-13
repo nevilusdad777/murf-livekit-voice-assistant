@@ -291,7 +291,7 @@ export const WelcomeView = ({
                         <div className="font-mono font-bold text-violet-400 truncate max-w-[140px]" title={call.call_id}>
                           {call.call_id}
                         </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
+                        <div className="text-[10px] text-slate-400 mt-0.5">
                           {call.start_time.split("T")[0]} {call.start_time.split("T")[1].substring(0, 5)}
                         </div>
                       </td>
@@ -369,7 +369,7 @@ export const WelcomeView = ({
                       </span>
                     </div>
                     <p className="text-xs text-slate-200 font-semibold">{ticket.summary}</p>
-                    <div className="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-white/5">
+                    <div className="flex justify-between items-center text-[10px] text-slate-400 pt-1 border-t border-white/5">
                       <span>👤 Caller: {ticket.user_name}</span>
                       <span>📞 Followup: {ticket.followup_method}</span>
                       <span className="text-emerald-400 font-medium">Status: {ticket.status}</span>
