@@ -7,25 +7,6 @@ import { WarningIcon } from '@phosphor-icons/react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/shadcn/utils';
 
-// Premium pulsing circular waveform icon
-function WelcomeWaveform() {
-  return (
-    <div className="flex items-center justify-center gap-1.5 h-16 mb-6">
-      {[...Array(6)].map((_, i) => (
-        <span
-          key={i}
-          className="w-1.5 rounded-full bg-gradient-to-t from-violet-500 to-indigo-400 animate-bounce"
-          style={{
-            height: `${24 + Math.sin(i) * 16}px`,
-            animationDelay: `${i * 0.15}s`,
-            animationDuration: '1.2s'
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
 const BharatIcon = () => (
   <svg className="w-12 h-12 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="5" width="20" height="14" rx="2" />
@@ -52,25 +33,41 @@ export const WelcomeView = ({
   ref,
 }: React.ComponentProps<'div'> & WelcomeViewProps) => {
   const [tickets, setTickets] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>({
+    total: 0,
+    successful: 0,
+    failed: 0,
+    success_rate: 0,
+    reasons: {},
+    history: []
+  });
 
-  // Poll tickets for the welcome screen dashboard
+  // Poll tickets and call analytics from backend server every 3 seconds
   useEffect(() => {
-    const fetchTickets = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('http://localhost:8085/tickets');
-        if (res.ok) {
-          const data = await res.json();
+        // Tickets
+        const resTickets = await fetch('http://localhost:8085/tickets');
+        if (resTickets.ok) {
+          const data = await resTickets.json();
           if (Array.isArray(data)) {
             setTickets(data);
           }
+        }
+        
+        // Analytics
+        const resAnalytics = await fetch('http://localhost:8085/analytics');
+        if (resAnalytics.ok) {
+          const data = await resAnalytics.json();
+          setAnalytics(data);
         }
       } catch (err) {
         // Silent catch
       }
     };
 
-    fetchTickets();
-    const interval = setInterval(fetchTickets, 3000);
+    fetchData();
+    const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -135,9 +132,10 @@ export const WelcomeView = ({
   ];
 
   return (
-    <div ref={ref} className="w-full max-w-5xl px-4 py-8 mx-auto flex flex-col items-center select-none overflow-y-auto">
+    <div ref={ref} className="w-full max-w-5xl px-4 py-8 mx-auto flex flex-col items-center select-none overflow-y-auto space-y-12">
+      
       {/* Brand Header */}
-      <div className="w-full flex justify-between items-center mb-8 border-b border-white/5 pb-4">
+      <div className="w-full flex justify-between items-center border-b border-white/5 pb-4">
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full bg-violet-500 shadow-lg shadow-violet-500/50" />
           <span className="font-extrabold text-sm tracking-widest text-slate-300">BHARAT PAY</span>
@@ -147,9 +145,8 @@ export const WelcomeView = ({
         </div>
       </div>
 
-      {/* Main Container */}
+      {/* Welcome Block */}
       <div className="w-full flex flex-col items-center text-center max-w-3xl mx-auto space-y-6">
-        
         {/* Pulsing Avatar */}
         <div className="relative group">
           <div className="absolute inset-0 bg-violet-500/20 rounded-full blur-xl group-hover:scale-110 transition-transform duration-500" />
@@ -161,7 +158,7 @@ export const WelcomeView = ({
         {/* Badges and Titles */}
         <div className="space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-500/20 bg-violet-500/5 text-[10px] font-bold text-violet-400 uppercase tracking-wider">
-            💳 Financial Services AI Assistant • Day 7 Human-in-the-Loop
+            💳 Financial Services AI Assistant • Day 8 Analytics Dashboard
           </div>
           
           <h1 className="text-4xl md:text-5xl font-extrabold text-white flex items-center justify-center gap-3 tracking-tight">
@@ -173,7 +170,7 @@ export const WelcomeView = ({
 
           <p className="text-slate-400 max-w-xl mx-auto text-sm leading-relaxed">
             Your 24/7 AI Financial Voice Assistant. Smart payment support with{" "}
-            <span className="text-violet-400 font-semibold">Human Escalation Dispatch</span> for emergencies.
+            <span className="text-violet-400 font-semibold">Human Escalation Dispatch</span> and real-time performance analytics.
           </p>
 
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-[10px] font-bold text-emerald-400">
@@ -198,7 +195,7 @@ export const WelcomeView = ({
           ))}
         </div>
 
-        {/* Start Button */}
+        {/* Start Talking Button */}
         <div className="pt-6 pb-2">
           <Button
             size="lg"
@@ -210,8 +207,128 @@ export const WelcomeView = ({
         </div>
       </div>
 
+      {/* Call Analytics Dashboard Card */}
+      <div className="w-full max-w-4xl rounded-2xl border border-white/10 bg-slate-950/70 p-6 shadow-2xl backdrop-blur-md space-y-6">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-violet-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              📊 Call Analytics Command Dashboard
+            </h3>
+          </div>
+          <span className="text-[9px] px-2.5 py-0.5 rounded-full border border-violet-500/20 bg-violet-500/10 text-violet-400 font-extrabold tracking-widest uppercase">
+            LIVE ANALYTICS ACTIVE
+          </span>
+        </div>
+
+        {/* Grid of Main KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="p-4 rounded-xl border border-white/5 bg-white/5 flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Calls</span>
+            <span className="text-3xl font-extrabold text-white mt-2">{analytics.total}</span>
+          </div>
+          <div className="p-4 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.02] flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Successful Calls</span>
+            <span className="text-3xl font-extrabold text-emerald-400 mt-2">{analytics.successful}</span>
+          </div>
+          <div className="p-4 rounded-xl border border-rose-500/15 bg-rose-500/[0.02] flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Failed Calls</span>
+            <span className="text-3xl font-extrabold text-rose-400 mt-2">{analytics.failed}</span>
+          </div>
+          <div className="p-4 rounded-xl border border-violet-500/15 bg-violet-500/[0.02] flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Success Rate</span>
+            <span className="text-3xl font-extrabold text-violet-400 mt-2">{analytics.success_rate}%</span>
+          </div>
+        </div>
+
+        {/* Advanced Stats: Failure reasons distribution */}
+        {analytics.failed > 0 && (
+          <div className="p-4 rounded-xl border border-white/5 bg-slate-900/30 space-y-3">
+            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Failure Cause Distribution</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="flex justify-between items-center text-xs p-2 rounded-lg bg-white/5 border border-white/5">
+                <span className="text-slate-400">Incomplete Calls</span>
+                <span className="font-bold text-slate-200">{analytics.reasons["Incomplete"] || 0}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs p-2 rounded-lg bg-white/5 border border-white/5">
+                <span className="text-slate-400">Declined Consent</span>
+                <span className="font-bold text-slate-200">{analytics.reasons["Declined"] || 0}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs p-2 rounded-lg bg-white/5 border border-white/5">
+                <span className="text-slate-400">Security Violations</span>
+                <span className="font-bold text-rose-400">{analytics.reasons["Security Violation"] || 0}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Live Call History List */}
+        <div className="space-y-3">
+          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recent Call History Log</h4>
+          {analytics.history.length === 0 ? (
+            <div className="p-6 rounded-xl border border-dashed border-slate-800 text-center text-xs text-slate-500">
+              No recent call history logs found. Complete a call session to populate.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-white/10 text-slate-400 font-bold uppercase text-[9px] tracking-wider">
+                    <th className="py-2.5 px-3">Call ID / Time</th>
+                    <th className="py-2.5 px-3">Channel</th>
+                    <th className="py-2.5 px-3">Duration</th>
+                    <th className="py-2.5 px-3">Outcome</th>
+                    <th className="py-2.5 px-3">Actions Taken</th>
+                    <th className="py-2.5 px-3">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {analytics.history.map((call: any) => (
+                    <tr key={call.call_id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="font-mono font-bold text-violet-400 truncate max-w-[140px]" title={call.call_id}>
+                          {call.call_id}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {call.start_time.split("T")[0]} {call.start_time.split("T")[1].substring(0, 5)}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={cn("px-2 py-0.5 rounded text-[10px] font-semibold border", call.channel === "SIP" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20")}>
+                          {call.channel}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-slate-300">{call.duration}s</td>
+                      <td className="py-3 px-3">
+                        <span className={cn("px-2 py-0.5 rounded-full text-[9px] font-extrabold border uppercase tracking-wider", call.outcome === "Success" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20")}>
+                          {call.outcome}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-slate-400">{call.actions_taken}</td>
+                      <td className="py-3 px-3">
+                        {call.outcome === "Failed" ? (
+                          <span className="text-rose-400/90 italic text-[10px]">
+                            {call.failure_reason}
+                          </span>
+                        ) : (
+                          <span className="text-emerald-400/90 text-[10px] font-medium">
+                            Completed task
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Persistent Bottom Dashboard Support Tickets Panel */}
-      <div className="w-full max-w-4xl mt-12">
+      <div className="w-full max-w-4xl">
         <div className="rounded-2xl border border-red-500/10 bg-red-500/[0.02] p-5 shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-red-500/10 pb-3 mb-4">
             <div className="flex items-center gap-2">
@@ -247,7 +364,7 @@ export const WelcomeView = ({
                       <span className="font-mono text-xs font-bold text-violet-400">
                         🎟️ Ticket: {ticket.ticket_id}
                       </span>
-                      <span className={cn("text-[9px] px-2 py-0.5 rounded-full border font-extrabold", urgencyColors[ticket.urgency] || 'bg-slate-500/10')}>
+                      <span className={cn("text-[9px] px-2.5 py-0.5 rounded-full border font-extrabold", urgencyColors[ticket.urgency] || 'bg-slate-500/10')}>
                         {ticket.urgency} URGENCY
                       </span>
                     </div>

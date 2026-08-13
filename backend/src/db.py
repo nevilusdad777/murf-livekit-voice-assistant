@@ -36,6 +36,19 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS calls (
+                call_id TEXT PRIMARY KEY,
+                user_name TEXT,
+                start_time TEXT,
+                end_time TEXT,
+                duration INTEGER,
+                channel TEXT,
+                outcome TEXT,
+                failure_reason TEXT,
+                actions_taken TEXT
+            )
+        """)
         conn.commit()
 
 def get_user(user_id):
@@ -78,6 +91,14 @@ def create_ticket(ticket_id, user_id, user_name, summary, urgency, language, fol
             INSERT INTO tickets (ticket_id, user_id, user_name, summary, urgency, language, followup_method)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (ticket_id, user_id, user_name, summary, urgency, language, followup_method))
+        conn.commit()
+
+def create_call(call_id, user_name, start_time, end_time, duration, channel, outcome, failure_reason, actions_taken):
+    with get_connection() as conn:
+        conn.execute("""
+            INSERT INTO calls (call_id, user_name, start_time, end_time, duration, channel, outcome, failure_reason, actions_taken)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (call_id, user_name, start_time, end_time, duration, channel, outcome, failure_reason, actions_taken))
         conn.commit()
 
 # Initialize on import

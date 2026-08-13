@@ -113,6 +113,34 @@ class TicketHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps(tickets).encode('utf-8'))
             except Exception as e:
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+        elif self.path == '/analytics':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            try:
+                import db
+                with db.get_connection() as conn:
+                    total = conn.execute("SELECT COUNT(*) as count FROM calls").fetchone()["count"]
+                    successful = conn.execute("SELECT COUNT(*) as count FROM calls WHERE outcome = 'Success'").fetchone()["count"]
+                    failed = conn.execute("SELECT COUNT(*) as count FROM calls WHERE outcome = 'Failed'").fetchone()["count"]
+                    
+                    reasons_rows = conn.execute("SELECT failure_reason, COUNT(*) as count FROM calls WHERE outcome = 'Failed' GROUP BY failure_reason").fetchall()
+                    reasons = {r["failure_reason"]: r["count"] for r in reasons_rows}
+                    
+                    history_rows = conn.execute("SELECT * FROM calls ORDER BY start_time DESC LIMIT 10").fetchall()
+                    history = [dict(h) for h in history_rows]
+                    
+                data = {
+                    "total": total,
+                    "successful": successful,
+                    "failed": failed,
+                    "success_rate": round((successful / total * 100), 1) if total > 0 else 0.0,
+                    "reasons": reasons,
+                    "history": history
+                }
+                self.wfile.write(json.dumps(data).encode('utf-8'))
+            except Exception as e:
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
         else:
             self.send_response(404)
             self.end_headers()
@@ -150,6 +178,19 @@ server.setup_fnc = prewarm
 
 @server.rtc_session(agent_name="my-agent")
 async def my_agent(ctx: JobContext):
+    from datetime import datetime
+    
+    # Call tracking variables
+    call_id = ctx.room.name or "Web-Call"
+    start_time_dt = datetime.now()
+    start_time_str = start_time_dt.isoformat()
+    
+    checked_rates = False
+    saved_profile = False
+    escalated = False
+    declined_consent = False
+    security_violation = False
+
     try:
         # Logging setup
         ctx.log_context_fields = {
@@ -190,9 +231,12 @@ async def my_agent(ctx: JobContext):
             eligibility_status: str,
             language_preference: str,
         ) -> str:
+            nonlocal saved_profile, declined_consent
             if not consent_given:
+                declined_consent = True
                 db.delete_user(user_id)
                 return "Profile not saved. Consent was denied."
+            saved_profile = True
             db.save_user(
                 user_id,
                 user_name,
@@ -222,6 +266,8 @@ async def my_agent(ctx: JobContext):
             description="Get the live exchange rates for converting foreign currencies (USD, EUR, GBP, AED, CAD) to Indian Rupee (INR). Call this whenever the user asks for exchange rates, currency conversion, or remittance prices."
         )
         async def get_exchange_rates() -> str:
+            nonlocal checked_rates
+            checked_rates = True
             import urllib.request
             import json
             from datetime import datetime
@@ -304,6 +350,8 @@ async def my_agent(ctx: JobContext):
             urgency: str, # 'Low', 'Medium', 'High', 'Emergency'
             followup_method: str, # 'Phone Call', 'Email', 'App Notification'
         ) -> str:
+            nonlocal escalated
+            escalated = True
             import random
             from datetime import datetime
             ticket_id = f"BP-{random.randint(1000, 9999)}"
@@ -408,6 +456,15 @@ async def my_agent(ctx: JobContext):
             agent=Assistant(instructions=instructions), room=ctx.room
         )
 
+        # Listen for credentials in user speech to flag security violations
+        @session.on("user_input_transcribed")
+        def on_user_speech(ev):
+            nonlocal security_violation
+            text = (ev.transcript or "").lower()
+            if any(w in text for w in ["pin", "otp", "password", "cvv", "ओटीपी", "पिन", "पासवर्ड"]):
+                logger.warning(f"🚨 Security guardrail triggered. Credentials detected in transcript: {text}")
+                security_violation = True
+
         # Listen for chat messages sent via data packets
         @ctx.room.on("data_received")
         def on_data_received(data: rtc.DataPacket):
@@ -428,8 +485,60 @@ async def my_agent(ctx: JobContext):
         await asyncio.sleep(1)
         await session.say(greeting_text, allow_interruptions=True)
 
+        # Block until the room is disconnected to keep the try-block open
+        disconnect_event = asyncio.Event()
+        @ctx.room.on("disconnected")
+        def on_disconnected():
+            disconnect_event.set()
+        await disconnect_event.wait()
+
     except Exception as e:
         logger.error(f"Agent session error: {e}", exc_info=True)
+    finally:
+        # Compute duration and log call outcomes to SQLite on session close
+        end_time_dt = datetime.now()
+        end_time_str = end_time_dt.isoformat()
+        duration = int((end_time_dt - start_time_dt).total_seconds())
+        channel = "SIP" if user_id.startswith("sip_") else "Web"
+        
+        actions_list = []
+        if checked_rates:
+            actions_list.append("Checked Rates")
+        if saved_profile:
+            actions_list.append("Saved Profile")
+        if escalated:
+            actions_list.append("Escalated")
+        actions_taken = ", ".join(actions_list) if actions_list else "None"
+        
+        if security_violation:
+            outcome = "Failed"
+            failure_reason = "Security Violation"
+        elif declined_consent:
+            outcome = "Failed"
+            failure_reason = "Declined"
+        elif checked_rates or saved_profile or escalated:
+            outcome = "Success"
+            failure_reason = "None"
+        else:
+            outcome = "Failed"
+            failure_reason = "Incomplete"
+            
+        try:
+            import db
+            db.create_call(
+                call_id=call_id,
+                user_name=user_name,
+                start_time=start_time_str,
+                end_time=end_time_str,
+                duration=duration,
+                channel=channel,
+                outcome=outcome,
+                failure_reason=failure_reason,
+                actions_taken=actions_taken
+            )
+            logger.info(f"💾 Call record successfully saved to SQLite: CallID={call_id}, Outcome={outcome}, Reason={failure_reason}")
+        except Exception as ex:
+            logger.error(f"Failed to record call in SQLite: {ex}")
 
 
 if __name__ == "__main__":
