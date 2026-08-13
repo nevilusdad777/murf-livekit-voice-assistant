@@ -37,12 +37,20 @@ const tileViewClassNames = {
   // hasSecondTile: false
   // layout: Column 1 / Row 1 / Column-Span 2
   // align: x-center y-center
-  agentChatOpenWithoutSecondTile: ['col-start-1 row-start-1', 'col-span-2', 'place-content-center justify-self-center'],
+  agentChatOpenWithoutSecondTile: [
+    'col-start-1 row-start-1',
+    'col-span-2',
+    'place-content-center justify-self-center',
+  ],
   // Agent
   // chatOpen: false
   // layout: Column 1 / Row 1 / Column-Span 2 / Row-Span 3
   // align: x-center y-center
-  agentChatClosed: ['col-start-1 row-start-1', 'col-span-2 row-span-3', 'place-content-center justify-self-center'],
+  agentChatClosed: [
+    'col-start-1 row-start-1',
+    'col-span-2 row-span-3',
+    'place-content-center justify-self-center',
+  ],
   // Second tile
   // chatOpen: true,
   // hasSecondTile: true
@@ -154,8 +162,8 @@ export function TileLayout({
                     audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
                     isChatOpen={chatOpen}
                     className={cn(
-                      'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full',
-                      'bg-transparent rounded-full border border-transparent'
+                      'absolute top-1/2 left-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2',
+                      'rounded-full border border-transparent bg-transparent'
                     )}
                     style={{ color: audioVisualizerColor }}
                   />

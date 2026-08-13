@@ -2,7 +2,12 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, type MotionProps, motion } from 'motion/react';
-import { useAgent, useSessionContext, useSessionMessages, useChat } from '@livekit/components-react';
+import {
+  useAgent,
+  useChat,
+  useSessionContext,
+  useSessionMessages,
+} from '@livekit/components-react';
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
 import {
   AgentControlBar,
@@ -92,7 +97,7 @@ export function Fade({ top = false, bottom = false, className }: FadeProps) {
   return (
     <div
       className={cn(
-        'from-transparent pointer-events-none h-4 bg-linear-to-b to-transparent',
+        'pointer-events-none h-4 bg-linear-to-b from-transparent to-transparent',
         top && 'bg-linear-to-b',
         bottom && 'bg-linear-to-t',
         className
@@ -201,9 +206,21 @@ export function AgentSessionView_01({
   };
 
   const actions = [
-    { title: 'Check Fees', desc: 'UPI & Card charges', prompt: 'What are the transaction charges for UPI and Credit Cards?' },
-    { title: 'Report Lost Card', desc: 'Securely block card', prompt: 'I want to block my card because I lost it.' },
-    { title: 'UPI Support', desc: 'Failed transfers help', prompt: 'My UPI transaction failed but money got debited.' }
+    {
+      title: 'Check Fees',
+      desc: 'UPI & Card charges',
+      prompt: 'What are the transaction charges for UPI and Credit Cards?',
+    },
+    {
+      title: 'Report Lost Card',
+      desc: 'Securely block card',
+      prompt: 'I want to block my card because I lost it.',
+    },
+    {
+      title: 'UPI Support',
+      desc: 'Failed transfers help',
+      prompt: 'My UPI transaction failed but money got debited.',
+    },
   ];
 
   useEffect(() => {
@@ -251,7 +268,10 @@ export function AgentSessionView_01({
       return { text: 'Connecting... / जुड़ रहा है...', color: 'bg-[#FFAE5C] text-black' };
     }
     if (agentState === 'speaking') {
-      return { text: 'Anisha is speaking... / अनीशा बोल रही है...', color: 'bg-green-600 text-white' };
+      return {
+        text: 'Anisha is speaking... / अनीशा बोल रही है...',
+        color: 'bg-green-600 text-white',
+      };
     }
     if (agentState === 'listening') {
       return { text: 'Listening to you... / सुन रही हूँ...', color: 'bg-blue-600 text-white' };
@@ -263,15 +283,17 @@ export function AgentSessionView_01({
   return (
     <section
       ref={ref}
-      className={cn('bg-transparent relative z-10 h-full w-full overflow-hidden', className)}
+      className={cn('relative z-10 h-full w-full overflow-hidden bg-transparent', className)}
       {...props}
     >
       <Fade top className="absolute inset-x-4 top-0 z-10 h-40" />
-      
+
       {/* Status badge — sits BELOW the visualizer zone, above the transcript */}
       {status && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-          <div className={`px-4 py-1.5 rounded-full text-xs font-semibold shadow-lg animate-pulse ${status.color}`}>
+        <div className="pointer-events-none absolute top-2 left-1/2 z-50 -translate-x-1/2">
+          <div
+            className={`animate-pulse rounded-full px-4 py-1.5 text-xs font-semibold shadow-lg ${status.color}`}
+          >
             {status.text}
           </div>
         </div>
@@ -288,8 +310,10 @@ export function AgentSessionView_01({
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
               <div className="flex items-center gap-2">
-                <span className={`inline-flex h-2.5 w-2.5 rounded-full ${liveRates.fallback ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-pulse'}`} />
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                <span
+                  className={`inline-flex h-2.5 w-2.5 rounded-full ${liveRates.fallback ? 'animate-pulse bg-amber-500' : 'animate-pulse bg-emerald-500'}`}
+                />
+                <h4 className="text-xs font-bold tracking-wider text-slate-300 uppercase">
                   {liveRates.fallback ? 'Cached Exchange Rates' : 'Live Exchange Rates'}
                 </h4>
               </div>
@@ -298,11 +322,16 @@ export function AgentSessionView_01({
                 className="rounded-lg p-1 text-slate-400 hover:bg-white/5 hover:text-white"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
-            
+
             <div className="mt-3 space-y-2">
               {Object.entries(liveRates.rates).map(([currency, rate]: [string, any]) => (
                 <div key={currency} className="flex justify-between text-sm">
@@ -311,8 +340,8 @@ export function AgentSessionView_01({
                 </div>
               ))}
             </div>
-            
-            <div className="mt-3 border-t border-white/5 pt-2 text-[10px] text-slate-500 text-right">
+
+            <div className="mt-3 border-t border-white/5 pt-2 text-right text-[10px] text-slate-500">
               {liveRates.date}
             </div>
           </motion.div>
@@ -330,8 +359,8 @@ export function AgentSessionView_01({
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
               <div className="flex items-center gap-2">
-                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-violet-500 animate-pulse" />
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-violet-500" />
+                <h4 className="text-xs font-bold tracking-wider text-slate-300 uppercase">
                   Escalated Tickets ({tickets.length})
                 </h4>
               </div>
@@ -340,29 +369,44 @@ export function AgentSessionView_01({
                 className="rounded-lg p-1 text-slate-400 hover:bg-white/5 hover:text-white"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
-            
-            <div className="mt-3 max-h-60 overflow-y-auto space-y-3 pr-1">
+
+            <div className="mt-3 max-h-60 space-y-3 overflow-y-auto pr-1">
               {tickets.map((ticket, index) => {
                 const urgencyColors: any = {
                   Low: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
                   Medium: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
                   High: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-                  Emergency: 'bg-red-500/20 text-red-400 border-red-500/30'
+                  Emergency: 'bg-red-500/20 text-red-400 border-red-500/30',
                 };
                 return (
-                  <div key={index} className="p-2.5 rounded-xl border border-white/5 bg-white/5 space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="font-mono text-xs font-bold text-violet-400">{ticket.ticket_id}</span>
-                      <span className={cn("text-[9px] px-2 py-0.5 rounded-full border font-semibold", urgencyColors[ticket.urgency] || 'bg-slate-500/20')}>
+                  <div
+                    key={index}
+                    className="space-y-1.5 rounded-xl border border-white/5 bg-white/5 p-2.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-violet-400">
+                        {ticket.ticket_id}
+                      </span>
+                      <span
+                        className={cn(
+                          'rounded-full border px-2 py-0.5 text-[9px] font-semibold',
+                          urgencyColors[ticket.urgency] || 'bg-slate-500/20'
+                        )}
+                      >
                         {ticket.urgency}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-200 line-clamp-2">{ticket.summary}</p>
-                    <div className="flex justify-between items-center text-[9px] text-slate-500">
+                    <p className="line-clamp-2 text-xs text-slate-200">{ticket.summary}</p>
+                    <div className="flex items-center justify-between text-[9px] text-slate-500">
                       <span>Followup: {ticket.followup_method}</span>
                       <span>{ticket.date}</span>
                     </div>
@@ -384,29 +428,41 @@ export function AgentSessionView_01({
             className="absolute top-80 left-4 z-50 w-72 rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl md:top-96 md:left-6"
           >
             {/* Security Shield Banner */}
-            <div className="mb-4 p-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/5 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-2.5">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
                 </span>
                 <span className="text-[10px] font-bold text-slate-300">Security Shield Active</span>
               </div>
-              <svg className="h-4.5 w-4.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              <svg
+                className="h-4.5 w-4.5 text-emerald-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                />
               </svg>
             </div>
 
-            <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2.5">Quick Actions</h4>
+            <h4 className="mb-2.5 text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">
+              Quick Actions
+            </h4>
             <div className="space-y-2">
               {actions.map((action, i) => (
                 <button
                   key={i}
                   onClick={() => handleAction(action.prompt)}
-                  className="w-full text-left p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/20 hover:bg-violet-500/5 active:scale-[0.98] transition-all"
+                  className="w-full rounded-xl border border-white/5 bg-white/5 p-2.5 text-left transition-all hover:border-violet-500/20 hover:bg-violet-500/5 active:scale-[0.98]"
                 >
                   <h5 className="text-[11px] font-bold text-slate-200">{action.title}</h5>
-                  <p className="text-[9px] text-slate-500 mt-0.5">{action.desc}</p>
+                  <p className="mt-0.5 text-[9px] text-slate-500">{action.desc}</p>
                 </button>
               ))}
             </div>

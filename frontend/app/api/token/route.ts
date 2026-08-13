@@ -43,11 +43,12 @@ export async function POST(req: Request) {
         { ignoreUnknownFields: true }
       );
     }
-      
+
     // Generate participant token
     const { searchParams } = new URL(req.url);
     const participantName = searchParams.get('userName') || 'user';
-    const participantIdentity = searchParams.get('userId') || `voice_assistant_user_${Math.floor(Math.random() * 10_000)}`;
+    const participantIdentity =
+      searchParams.get('userId') || `voice_assistant_user_${Math.floor(Math.random() * 10_000)}`;
     const roomName = `voice_assistant_room_${Math.floor(Math.random() * 10_000)}`;
 
     const participantToken = await createParticipantToken(

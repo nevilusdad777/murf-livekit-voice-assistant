@@ -29,7 +29,9 @@ export function AgentAudioVisualizerPlasma({
   const animRef = useRef<number>(0);
   const volumeRef = useRef(0);
   const stateRef = useRef(state);
-  useEffect(() => { stateRef.current = state; }, [state]);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -46,13 +48,11 @@ export function AgentAudioVisualizerPlasma({
       speed: 0.005 + Math.random() * 0.008,
       size: 1 + Math.random() * 2,
       wobbleSpeed: 2 + Math.random() * 3,
-      phase: Math.random() * Math.PI * 2
+      phase: Math.random() * Math.PI * 2,
     }));
 
     const audioTrackObj =
-      audioTrack &&
-      'publication' in audioTrack &&
-      audioTrack.publication?.track
+      audioTrack && 'publication' in audioTrack && audioTrack.publication?.track
         ? (audioTrack.publication.track as LocalAudioTrack | RemoteAudioTrack)
         : audioTrack;
 
@@ -74,7 +74,7 @@ export function AgentAudioVisualizerPlasma({
           source.connect(analyser);
         }
       } catch (err) {
-        console.error("Failed to initialize Web Audio Analyser: ", err);
+        console.error('Failed to initialize Web Audio Analyser: ', err);
       }
     }
 
@@ -133,7 +133,7 @@ export function AgentAudioVisualizerPlasma({
         const modulation = Math.sin(angle * 12 + t * 5) * (isSpeaking ? 18 * vol : 3);
         const radius = maxR * 0.65 + modulation;
         const length = 4 + (isSpeaking ? vol * 45 : 0) + Math.sin(t * 2 + i) * 2;
-        
+
         const x1 = Math.cos(angle) * radius;
         const y1 = Math.sin(angle) * radius;
         const x2 = Math.cos(angle) * (radius + length);
@@ -210,12 +210,7 @@ export function AgentAudioVisualizerPlasma({
         className="absolute inset-0 rounded-full opacity-20 blur-3xl"
         style={{ background: `radial-gradient(circle, ${color} 0%, transparent 70%)` }}
       />
-      <canvas
-        ref={canvasRef}
-        width={450}
-        height={450}
-        className="relative z-10 w-full h-full"
-      />
+      <canvas ref={canvasRef} width={450} height={450} className="relative z-10 h-full w-full" />
     </div>
   );
 }

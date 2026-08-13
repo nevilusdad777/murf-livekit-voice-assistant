@@ -6,9 +6,9 @@ import { useVoiceAssistant } from '@livekit/components-react';
 import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura';
 import { AgentAudioVisualizerBar } from '@/components/agents-ui/agent-audio-visualizer-bar';
 import { AgentAudioVisualizerGrid } from '@/components/agents-ui/agent-audio-visualizer-grid';
+import { AgentAudioVisualizerPlasma } from '@/components/agents-ui/agent-audio-visualizer-plasma';
 import { AgentAudioVisualizerRadial } from '@/components/agents-ui/agent-audio-visualizer-radial';
 import { AgentAudioVisualizerWave } from '@/components/agents-ui/agent-audio-visualizer-wave';
-import { AgentAudioVisualizerPlasma } from '@/components/agents-ui/agent-audio-visualizer-plasma';
 import { cn } from '@/lib/shadcn/utils';
 
 const MotionAgentAudioVisualizerAura = motion.create(AgentAudioVisualizerAura);
@@ -55,7 +55,7 @@ export function AudioVisualizer({
             state={state}
             audioTrack={audioTrack}
             color={audioVisualizerColor}
-            className="w-full h-full"
+            className="h-full w-full"
           />
         </motion.div>
       );

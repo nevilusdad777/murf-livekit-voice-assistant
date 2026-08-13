@@ -49,7 +49,7 @@ load_dotenv(".env.local")
 # Change this prompt to change what your voice agent does.
 # See README.md for example prompts (customer support, language tutor, receptionist).
 SYSTEM_PROMPT = """IDENTITY:
-You are Anisha, a friendly and professional voice assistant for Bharat Pay, a secure digital payments platform.
+You are Anisha, a friendly and professional voice assistant for Nexus Pay, a secure digital payments platform.
 
 OBJECTIVES:
 - Answer questions about transaction fees (free for UPI/wallet, 2% for credit card transfers).
@@ -58,7 +58,7 @@ OBJECTIVES:
 - Help users lookup live exchange rates (USD, EUR, GBP, AED, CAD to INR) and calculate foreign remittances using the `get_exchange_rates` tool.
 
 KNOWLEDGE:
-- You know Bharat Pay services: UPI transfers, wallet payments, credit card payments, and foreign remittances.
+- You know Nexus Pay services: UPI transfers, wallet payments, credit card payments, and foreign remittances.
 - You can get live exchange rates using the `get_exchange_rates` tool. Always say when the rate is from based on the tool's response.
 - You do NOT have live access to the user's account details, balance, or specific transactions.
 - You cannot make transfers, change passwords, or perform transactions.
@@ -400,7 +400,7 @@ async def my_agent(ctx: JobContext):
                                 {"name": "Followup Method", "value": followup_method, "inline": True},
                                 {"name": "Summary", "value": summary}
                             ],
-                            "footer": {"text": "Bharat Pay Voice Assistant"}
+                            "footer": {"text": "Nexus Pay Voice Assistant"}
                         }]
                     }
                     req = urllib.request.Request(
@@ -437,19 +437,19 @@ async def my_agent(ctx: JobContext):
         is_outbound = user_id.startswith("sip_")
         if is_outbound:
             # Regulatory outbound call greeting: who's calling, why, and how to opt out
-            greeting_text = "Hello, this is Anisha calling from Bharat Pay regarding your PM-SBY scheme renewal. You can reply 'stop' or hang up at any time to opt out."
-            instructions += "\nOUTBOUND CALL COMPLIANCE:\n- Identify yourself as Anisha from Bharat Pay.\n- Inform the user their PM-SBY scheme renewal deadline is approaching.\n- State clearly that they can reply 'stop' or hang up to opt out.\n- If they ask to stop or opt out, execute the `forget_me` tool immediately."
+            greeting_text = "Hello, this is Anisha calling from Nexus Pay regarding your PM-SBY scheme renewal. You can reply 'stop' or hang up at any time to opt out."
+            instructions += "\nOUTBOUND CALL COMPLIANCE:\n- Identify yourself as Anisha from Nexus Pay.\n- Inform the user their PM-SBY scheme renewal deadline is approaching.\n- State clearly that they can reply 'stop' or hang up to opt out.\n- If they ask to stop or opt out, execute the `forget_me` tool immediately."
         elif user_profile and user_profile.get("consent_given"):
             schemes = user_profile.get("schemes_checked") or "None"
             elig = user_profile.get("eligibility_status") or "None"
             instructions += f"\nRETURNING USER MEMORY:\n- User Name: {user_name}\n- Last checked schemes: {schemes}\n- Last eligibility: {elig}\n- Task: Greet them warmly by name, and follow up directly on their last query."
             lang = user_profile.get("language_preference", "English").lower()
             if "hindi" in lang:
-                greeting_text = f"नमस्ते {user_name}, भारत पे में आपका स्वागत है। पिछली बार हमने {schemes} के बारे में बात की थी। आज मैं आपकी क्या सहायता कर सकती हूँ?"
+                greeting_text = f"नमस्ते {user_name}, नेक्सस पे में आपका स्वागत है। पिछली बार हमने {schemes} के बारे में बात की थी। आज मैं आपकी क्या सहायता कर सकती हूँ?"
             else:
-                greeting_text = f"Namaste {user_name}, welcome back to Bharat Pay. Last time we spoke about {schemes}. How can I assist you today?"
+                greeting_text = f"Namaste {user_name}, welcome back to Nexus Pay. Last time we spoke about {schemes}. How can I assist you today?"
         else:
-            greeting_text = "Hello! I am Anisha from Bharat Pay support. I can help you check transaction charges or block a lost card. How can I help you today?"
+            greeting_text = "Hello! I am Anisha from Nexus Pay support. I can help you check transaction charges or block a lost card. How can I help you today?"
 
         # Start the session
         await session.start(

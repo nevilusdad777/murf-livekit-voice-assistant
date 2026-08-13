@@ -33,9 +33,9 @@ export interface AppConfig {
 }
 
 export const APP_CONFIG_DEFAULTS: AppConfig = {
-  companyName: 'Bharat AI',
-  pageTitle: 'Anisha — Voice AI Assistant',
-  pageDescription: 'A regional voice agent powered by Murf Falcon and LiveKit',
+  companyName: 'Nexus Pay',
+  pageTitle: 'Anisha — Nexus Pay Assistant',
+  pageDescription: 'A real-time financial voice agent powered by Murf Falcon and LiveKit',
 
   supportsChatInput: true,
   supportsVideoInput: true,
