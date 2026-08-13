@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "clean": "node -e \"const fs = require('fs'); if (fs.existsSync('.next')) fs.rmSync('.next', { recursive: true, force: true })\"",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
