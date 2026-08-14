@@ -48,7 +48,7 @@ load_dotenv(".env.local")
 
 # Change this prompt to change what your voice agent does.
 # See README.md for example prompts (customer support, language tutor, receptionist).
-SYSTEM_PROMPT = """IDENTITY:
+MAIN_SYSTEM_PROMPT = """IDENTITY:
 You are Anisha, a friendly and professional voice assistant for Nexus Pay, a secure digital payments platform.
 
 OBJECTIVES:
@@ -57,8 +57,13 @@ OBJECTIVES:
 - Check transaction status queries (explain that they need to look at the 'History' tab in their app, as you cannot view live personal data).
 - Help users lookup live exchange rates (USD, EUR, GBP, AED, CAD to INR) and calculate foreign remittances using the `get_exchange_rates` tool.
 
+ROUTING & HANDOFF (CRITICAL):
+- If the user asks about government financial schemes (like PM-Svanidhi, PM-JDY, PM-SBY, or scheme renewals), call the `transfer_to_schemes_specialist` tool. Say clearly: "I will connect you to our government schemes specialist Ankit. One moment please."
+- If the user asks about loans, credit limits, applying for credit, or loan interest rates, call the `transfer_to_loans_specialist` tool. Say clearly: "I will connect you to our loan specialist Rohan. One moment please."
+
 KNOWLEDGE:
 - You know Nexus Pay services: UPI transfers, wallet payments, credit card payments, and foreign remittances.
+- You do NOT have live access to details of government schemes or loans, you MUST transfer the user to the respective specialist.
 - You can get live exchange rates using the `get_exchange_rates` tool. Always say when the rate is from based on the tool's response.
 - You do NOT have live access to the user's account details, balance, or specific transactions.
 - You cannot make transfers, change passwords, or perform transactions.
@@ -66,11 +71,11 @@ KNOWLEDGE:
 LANGUAGE & SCRIPT (CRITICAL):
 - Always write every language in its own native script.
 - If the user speaks in English, reply in English.
-- If the user speaks in Hindi, Hinglish, or code-mixed Hindi/English, reply in polite conversational Hindi written in the Devanagari script (e.g., "नमस्ते, मैं आपकी क्या सहायता कर सकती हूँ?"). Do not mix scripts or write Hindi in Latin script.
+- If the user speaks in Hindi, Hinglish, or code-mixed Hindi/English, reply in polite conversational Hindi written in the Devanagari script.
 - Keep replies under 20 words. Avoid bullet points, lists, brackets, and complex terms.
 
 GUARDRAILS (CRITICAL):
-- Never ask for or accept OTP, PIN, password, or CVV. If the user mentions or starts to provide any of these, immediately stop them and say: "कृपया अपना ओटीपी, पिन या पासवर्ड कभी भी किसी के साथ साझा न करें। सुरक्षा कारणों से मैं इस कॉल को समाप्त कर रही हूँ।" (or in English if they spoke English: "Please never share your OTP, PIN, or password with anyone. For security reasons, I cannot continue this call.")
+- Never ask for or accept OTP, PIN, password, or CVV. If the user mentions or starts to provide any of these, immediately stop them and say: "कृपया अपना ओटीपी, पिन या पासवर्ड कभी भी किसी के साथ साझा न करें। सुरक्षा कारणों से मैं इस कॉल को समाप्त कर रही हूँ।" (or in English: "Please never share your OTP, PIN, or password with anyone. For security reasons, I cannot continue this call.")
 - Never promise loan approval, credit limit increases, or cashback schemes.
 - Never perform money transfers.
 - Escalation Script: If the user insists on actions you cannot perform (like money transfers, live balance checks, or resetting passwords), say: "सुरक्षा कारणों से, मुझे आपको एक सीनियर अधिकारी के पास ट्रांसफर करना होगा। कृपया लाइन पर बने रहें।" (or in English: "For security reasons, I must transfer you to a human supervisor. Please hold.")
@@ -87,6 +92,46 @@ MEMORY & CONSENT (CRITICAL):
 - If the user refuses consent, do NOT call `save_profile`, or call it with `consent_given=False` to clear any data.
 - If the user asks to be forgotten, call the `forget_me` tool to completely delete their profile.
 """
+
+SCHEME_SPECIALIST_PROMPT = """IDENTITY:
+You are Ankit, the Government Scheme Specialist at Nexus Pay.
+
+OBJECTIVES:
+- Provide detailed information on government financial schemes:
+  - **PM-Svanidhi**: Working capital micro-loan for street vendors up to ₹10,000 for 1st tenure, 7% interest subsidy.
+  - **PM-JDY (Jan Dhan Yojana)**: Zero-balance basic savings account, ₹10,000 overdraft facility, free accidental insurance of ₹2 Lakhs.
+  - **PM-SBY (Suraksha Bima Yojana)**: Accidental death/disability insurance cover of ₹2 Lakhs at just ₹20 annual premium.
+- Check user qualification/eligibility for these schemes.
+- Help users apply or check status.
+
+ROUTING & HANDOFF (CRITICAL):
+- If the user asks about regular customer support queries (like transaction fees, card blocking, exchange rates, fraud disputes, or general customer care), you MUST transfer them back to the main assistant. Call the `transfer_to_main_agent` tool and say: "I will transfer you back to our main customer support agent. One moment."
+
+CONTINUITY (CRITICAL):
+- You must read the recent chat history to understand what the user was asking before the transfer, and continue that conversation seamlessly. Greet them by saying: "Hello, I am Ankit, your government schemes specialist. I see you were asking about schemes. How can I help you check eligibility or details today?"
+- Keep replies under 20 words. Always write every language in its own native script.
+- Never ask for or accept OTP, PIN, password, or CVV. If they offer it, say: "Please never share your OTP, PIN, or password with anyone. For security reasons, I cannot continue this call."
+"""
+
+LOAN_SPECIALIST_PROMPT = """IDENTITY:
+You are Rohan, the Loan & Credit Specialist at Nexus Pay.
+
+OBJECTIVES:
+- Assist users with loan details, interest rates, credit limits, and eligibility:
+  - **Personal Loans**: Interest rate of 12% per annum, tenure up to 36 months, instant approval up to ₹5 Lakhs.
+  - **Business Loans**: Interest rate of 10.5% per annum, requires business registration and 12-month bank statements.
+  - **Credit Limit Calculator**: Quick check based on monthly income. Estimate credit limit as 3 times the monthly income (e.g. income ₹30,000 = limit ₹90,000).
+
+ROUTING & HANDOFF (CRITICAL):
+- If the user asks about regular customer support queries (like transaction fees, card blocking, exchange rates, fraud disputes, or general customer care), you MUST transfer them back to the main assistant. Call the `transfer_to_main_agent` tool and say: "I will transfer you back to our main customer support agent. One moment."
+
+CONTINUITY (CRITICAL):
+- You must read the recent chat history to understand what the user was asking before the transfer, and continue that conversation seamlessly. Greet them by saying: "Hello, I am Rohan, your loan and credit specialist. I can help you with loan options, interest rates, or credit limits. What are you looking for today?"
+- Keep replies under 20 words. Always write every language in its own native script.
+- Never ask for or accept OTP, PIN, password, or CVV. If they offer it, say: "Please never share your OTP, PIN, or password with anyone. For security reasons, I cannot continue this call."
+"""
+
+SYSTEM_PROMPT = MAIN_SYSTEM_PROMPT
 
 
 import threading
@@ -414,6 +459,43 @@ async def my_agent(ctx: JobContext):
                     
             return f"Successfully created ticket {ticket_id}. Explain to the user that their support ticket has been registered, and give them the Reference ID: {ticket_id}."
 
+        # Define multi-agent transfer tools
+        @llm.function_tool(
+            description="Transfer the caller to the Government Schemes Specialist (Ankit). Use this when the user asks about government financial schemes (PM-Svanidhi, PM-JDY, PM-SBY, or scheme renewals)."
+        )
+        async def transfer_to_schemes_specialist() -> str:
+            try:
+                await session.say("I will connect you to our government schemes specialist Ankit. One moment please.", allow_interruptions=False)
+                await session.update_agent(scheme_specialist)
+                return "Successfully transferred to Government Schemes Specialist."
+            except Exception as e:
+                logger.error(f"Handoff to schemes specialist failed: {e}")
+                return f"Handoff failed: {e}. Please explain to the user that the transfer failed but you can still help them directly."
+
+        @llm.function_tool(
+            description="Transfer the caller to the Loan & Credit Specialist (Rohan). Use this when the user asks about loans, credit limits, applying for credit, or loan interest rates."
+        )
+        async def transfer_to_loans_specialist() -> str:
+            try:
+                await session.say("I will connect you to our loan specialist Rohan. One moment please.", allow_interruptions=False)
+                await session.update_agent(loan_specialist)
+                return "Successfully transferred to Loan & Credit Specialist."
+            except Exception as e:
+                logger.error(f"Handoff to loan specialist failed: {e}")
+                return f"Handoff failed: {e}. Please explain to the user that the transfer failed but you can still help them directly."
+
+        @llm.function_tool(
+            description="Transfer the caller back to the main customer support assistant (Anisha). Use this when the user is finished with schemes/loans or asks generic customer support queries (fees, card blocking, exchange rates, fraud)."
+        )
+        async def transfer_to_main_agent() -> str:
+            try:
+                await session.say("I will transfer you back to our main customer support agent. One moment.", allow_interruptions=False)
+                await session.update_agent(main_agent)
+                return "Successfully transferred back to Main Customer Support Agent."
+            except Exception as e:
+                logger.error(f"Handoff back to main agent failed: {e}")
+                return f"Handoff failed: {e}. Please explain to the user that the transfer failed but you can still help them directly."
+
         # Set up the voice AI pipeline
         # NOTE: turn_detection removed on Windows — the MultilingualModel inference
         # runner uses a subprocess IPC pipe that crashes. VAD alone handles turns.
@@ -426,14 +508,23 @@ async def my_agent(ctx: JobContext):
                 tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
                 text_pacing=True,
             ),
-            tools=[save_profile, forget_me, get_exchange_rates, create_escalation],
+            tools=[
+                save_profile,
+                forget_me,
+                get_exchange_rates,
+                create_escalation,
+                transfer_to_schemes_specialist,
+                transfer_to_loans_specialist,
+                transfer_to_main_agent,
+            ],
             vad=ctx.proc.userdata["vad"],
         )
 
         # Compose greeting and instructions
         greeting_text = ""
-        instructions = SYSTEM_PROMPT
+        instructions = MAIN_SYSTEM_PROMPT
         
+        profile_memory = ""
         is_outbound = user_id.startswith("sip_")
         if is_outbound:
             # Regulatory outbound call greeting: who's calling, why, and how to opt out
@@ -442,7 +533,8 @@ async def my_agent(ctx: JobContext):
         elif user_profile and user_profile.get("consent_given"):
             schemes = user_profile.get("schemes_checked") or "None"
             elig = user_profile.get("eligibility_status") or "None"
-            instructions += f"\nRETURNING USER MEMORY:\n- User Name: {user_name}\n- Last checked schemes: {schemes}\n- Last eligibility: {elig}\n- Task: Greet them warmly by name, and follow up directly on their last query."
+            profile_memory = f"\nRETURNING USER MEMORY:\n- User Name: {user_name}\n- Last checked schemes: {schemes}\n- Last eligibility: {elig}"
+            instructions += f"{profile_memory}\n- Task: Greet them warmly by name, and follow up directly on their last query."
             lang = user_profile.get("language_preference", "English").lower()
             if "hindi" in lang:
                 greeting_text = f"नमस्ते {user_name}, नेक्सस पे में आपका स्वागत है। पिछली बार हमने {schemes} के बारे में बात की थी। आज मैं आपकी क्या सहायता कर सकती हूँ?"
@@ -451,9 +543,14 @@ async def my_agent(ctx: JobContext):
         else:
             greeting_text = "Hello! I am Anisha from Nexus Pay support. I can help you check transaction charges or block a lost card. How can I help you today?"
 
-        # Start the session
+        # Create multi-agent instances with shared memory context
+        main_agent = Assistant(instructions=instructions)
+        scheme_specialist = Assistant(instructions=SCHEME_SPECIALIST_PROMPT + profile_memory)
+        loan_specialist = Assistant(instructions=LOAN_SPECIALIST_PROMPT + profile_memory)
+
+        # Start the session with the Main Agent
         await session.start(
-            agent=Assistant(instructions=instructions), room=ctx.room
+            agent=main_agent, room=ctx.room
         )
 
         # Listen for credentials in user speech to flag security violations
