@@ -505,7 +505,7 @@ async def my_agent(ctx: JobContext):
             tts=murf.TTS(
                 voice="Anisha",
                 style="Conversation",
-                tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
+                tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=1),
                 text_pacing=True,
             ),
             tools=[
@@ -578,8 +578,7 @@ async def my_agent(ctx: JobContext):
             except Exception as e:
                 logger.debug(f"Non-chat data packet ignored: {e}")
 
-        # Give the agent a moment to settle then greet
-        await asyncio.sleep(1)
+        # Greet the user immediately upon connection
         await session.say(greeting_text, allow_interruptions=True)
 
         # Register close callback to save call analytics directly when the session ends

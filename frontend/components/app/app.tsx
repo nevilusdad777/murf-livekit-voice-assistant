@@ -233,27 +233,24 @@ export function App({ appConfig }: AppProps) {
   const [userName, setUserName] = useState<string>('Guest');
 
   useEffect(() => {
-    setMounted(true);
     let id = localStorage.getItem('bharatpay_user_id');
     if (!id) {
       id = 'user_' + Math.random().toString(36).substring(2, 11);
       localStorage.setItem('bharatpay_user_id', id);
     }
+    let name = localStorage.getItem('bharatpay_user_name') || 'Guest';
+    
     setUserId(id);
-
-    let name = localStorage.getItem('bharatpay_user_name');
-    if (!name) {
-      name = 'Guest';
-    }
     setUserName(name);
+    setMounted(true);
   }, []);
 
   const tokenSource = useMemo(() => {
-    const effectiveUserId = userId || 'user_guest';
+    if (!userId) return '';
     return typeof process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT === 'string'
       ? getSandboxTokenSource(appConfig)
       : TokenSource.endpoint(
-          `/api/token?userId=${effectiveUserId}&userName=${encodeURIComponent(userName)}`
+          `/api/token?userId=${userId}&userName=${encodeURIComponent(userName)}`
         );
   }, [appConfig, userId, userName]);
 
