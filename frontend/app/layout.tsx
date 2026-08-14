@@ -1,4 +1,5 @@
 // app/layout.tsx
+import type { Metadata } from 'next';
 import { Public_Sans } from 'next/font/google';
 import localFont from 'next/font/local';
 import { headers } from 'next/headers';
@@ -42,6 +43,15 @@ const commitMono = localFont({
   ],
 });
 
+export async function generateMetadata(): Promise<Metadata> {
+  const hdrs = await headers();
+  const appConfig = await getAppConfig(hdrs);
+  return {
+    title: appConfig.pageTitle,
+    description: appConfig.pageDescription,
+  };
+}
+
 interface RootLayoutProps {
   children: React.ReactNode;
 }
@@ -50,7 +60,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   const hdrs = await headers();
   const appConfig = await getAppConfig(hdrs);
   const styles = getStyles(appConfig);
-  const { pageTitle, pageDescription } = appConfig;
 
   return (
     <html
@@ -62,12 +71,16 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         'scroll-smooth font-sans antialiased'
       )}
     >
-      <head>
-        {styles && <style dangerouslySetInnerHTML={{ __html: styles }} />}
-        <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
+      <head suppressHydrationWarning>
+        {styles && (
+          <style
+            id="nexus-app-styles"
+            dangerouslySetInnerHTML={{ __html: styles }}
+            suppressHydrationWarning
+          />
+        )}
       </head>
-      <body className="overflow-x-hidden">
+      <body className="overflow-x-hidden" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
