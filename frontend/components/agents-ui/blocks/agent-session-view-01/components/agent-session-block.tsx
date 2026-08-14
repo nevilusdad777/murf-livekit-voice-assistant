@@ -183,6 +183,7 @@ export function AgentSessionView_01({
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const [chatOpen, setChatOpen] = useState(true);
+  const [quickActionsCollapsed, setQuickActionsCollapsed] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { state: agentState } = useAgent();
 
@@ -357,47 +358,80 @@ export function AgentSessionView_01({
               initial={{ opacity: 0, x: -100, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: -100, scale: 0.9 }}
-              className="pointer-events-auto w-full rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl"
+              className="pointer-events-auto w-full rounded-2xl border border-white/10 bg-slate-950/70 p-4 shadow-2xl backdrop-blur-xl transition-all"
             >
-              {/* Security Shield Banner */}
-              <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-300">Security Shield Active</span>
-                </div>
-                <svg
-                  className="h-4.5 w-4.5 text-emerald-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-              </div>
-
-              <h4 className="mb-2.5 text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">
-                Quick Actions
-              </h4>
-              <div className="space-y-2">
-                {actions.map((action, i) => (
+              {quickActionsCollapsed ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                    </span>
+                    <span className="text-xs font-bold text-slate-300">Quick Actions</span>
+                  </div>
                   <button
-                    key={i}
-                    onClick={() => handleAction(action.prompt)}
-                    className="w-full rounded-xl border border-white/5 bg-white/5 p-2.5 text-left transition-all hover:border-violet-500/20 hover:bg-violet-500/5 active:scale-[0.98]"
+                    onClick={() => setQuickActionsCollapsed(false)}
+                    className="rounded-lg p-1 text-violet-400 hover:bg-white/10 hover:text-violet-300 transition-colors"
+                    title="Expand Quick Actions"
                   >
-                    <h5 className="text-[11px] font-bold text-slate-200">{action.title}</h5>
-                    <p className="mt-0.5 text-[9px] text-slate-500">{action.desc}</p>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </button>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <>
+                  {/* Security Shield Banner */}
+                  <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-300">Security Shield Active</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <svg
+                        className="h-4.5 w-4.5 text-emerald-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2.5}
+                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                        />
+                      </svg>
+                      <button
+                        onClick={() => setQuickActionsCollapsed(true)}
+                        className="ml-1 rounded-lg p-1 text-slate-400 hover:bg-white/10 hover:text-white"
+                        title="Minimize"
+                      >
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <h4 className="mb-2.5 text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">
+                    Quick Actions
+                  </h4>
+                  <div className="space-y-2">
+                    {actions.map((action, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleAction(action.prompt)}
+                        className="w-full rounded-xl border border-white/5 bg-white/5 p-2.5 text-left transition-all hover:border-violet-500/20 hover:bg-violet-500/5 active:scale-[0.98]"
+                      >
+                        <h5 className="text-[11px] font-bold text-slate-200">{action.title}</h5>
+                        <p className="mt-0.5 text-[9px] text-slate-500">{action.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -473,11 +507,14 @@ export function AgentSessionView_01({
         )}
       </AnimatePresence>
 
-
-
       {/* transcript */}
 
-      <div className="absolute top-28 bottom-[135px] flex w-full flex-col md:bottom-[170px]">
+      <div
+        className={cn(
+          'absolute top-28 bottom-[135px] flex w-full flex-col transition-all duration-300 md:bottom-[170px]',
+          !quickActionsCollapsed && session.isConnected ? 'md:pl-72 lg:pl-0' : ''
+        )}
+      >
         <AnimatePresence>
           {chatOpen && (
             <motion.div
