@@ -511,8 +511,7 @@ export function AgentSessionView_01({
 
       <div
         className={cn(
-          'absolute top-28 bottom-[135px] flex w-full flex-col transition-all duration-300 md:bottom-[170px]',
-          !quickActionsCollapsed && session.isConnected ? 'md:pl-72 lg:pl-0' : ''
+          'absolute top-28 bottom-[135px] z-30 flex w-full flex-col pointer-events-auto transition-all duration-300 md:bottom-[170px]'
         )}
       >
         <AnimatePresence>
@@ -524,7 +523,10 @@ export function AgentSessionView_01({
               <AgentChatTranscript
                 agentState={agentState}
                 messages={messages}
-                className="mx-auto w-full max-w-2xl [&_.is-user>div]:rounded-[22px] [&>div>div]:px-4 [&>div>div]:pt-40 md:[&>div>div]:px-6"
+                className={cn(
+                  'w-full max-w-2xl overflow-y-auto pointer-events-auto [&_.is-user>div]:rounded-[22px] [&>div>div]:px-4 [&>div>div]:pt-10 md:[&>div>div]:px-6 transition-all duration-300',
+                  !quickActionsCollapsed && session.isConnected ? 'md:ml-80 lg:mx-auto' : 'mx-auto'
+                )}
               />
             </motion.div>
           )}
