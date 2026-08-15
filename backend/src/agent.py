@@ -523,6 +523,38 @@ async def my_agent(ctx: JobContext):
 
             return f"Successfully created ticket {ticket_id}. Explain to the user that their support ticket has been registered, and give them the Reference ID: {ticket_id}."
 
+        # Compose greeting and instructions
+        greeting_text = ""
+        instructions = MAIN_SYSTEM_PROMPT
+
+        profile_memory = ""
+        is_outbound = user_id.startswith("sip_")
+        if is_outbound:
+            # Regulatory outbound call greeting: who's calling, why, and how to opt out
+            greeting_text = "Hello, this is Anisha calling from Nexus Pay regarding your PM-SBY scheme renewal. You can reply 'stop' or hang up at any time to opt out."
+            instructions += "\nOUTBOUND CALL COMPLIANCE:\n- Identify yourself as Anisha from Nexus Pay.\n- Inform the user their PM-SBY scheme renewal deadline is approaching.\n- State clearly that they can reply 'stop' or hang up to opt out.\n- If they ask to stop or opt out, execute the `forget_me` tool immediately."
+        elif user_profile and user_profile.get("consent_given"):
+            schemes = user_profile.get("schemes_checked") or "None"
+            elig = user_profile.get("eligibility_status") or "None"
+            profile_memory = f"\nRETURNING USER MEMORY:\n- User Name: {user_name}\n- Last checked schemes: {schemes}\n- Last eligibility: {elig}"
+            instructions += f"{profile_memory}\n- Task: Greet them warmly by name, and follow up directly on their last query."
+            lang = user_profile.get("language_preference", "English").lower()
+            if "hindi" in lang:
+                greeting_text = f"नमस्ते {user_name}, नेक्सस पे में आपका स्वागत है। पिछली बार हमने {schemes} के बारे में बात की थी। आज मैं आपकी क्या सहायता कर सकती हूँ?"
+            else:
+                greeting_text = f"Namaste {user_name}, welcome back to Nexus Pay. Last time we spoke about {schemes}. How can I assist you today?"
+        else:
+            greeting_text = "Hello! I am Anisha from Nexus Pay support. I can help you check transaction charges or block a lost card. How can I help you today?"
+
+        # Create multi-agent instances with shared memory context
+        main_agent = Assistant(instructions=instructions)
+        scheme_specialist = Assistant(
+            instructions=SCHEME_SPECIALIST_PROMPT + profile_memory
+        )
+        loan_specialist = Assistant(
+            instructions=LOAN_SPECIALIST_PROMPT + profile_memory
+        )
+
         # Define multi-agent transfer tools
         @llm.function_tool(
             description="Transfer the caller to the Government Schemes Specialist (Ankit). Use this when the user asks about government financial schemes (PM-Svanidhi, PM-JDY, PM-SBY, or scheme renewals)."
@@ -591,38 +623,6 @@ async def my_agent(ctx: JobContext):
                 transfer_to_main_agent,
             ],
             vad=ctx.proc.userdata["vad"],
-        )
-
-        # Compose greeting and instructions
-        greeting_text = ""
-        instructions = MAIN_SYSTEM_PROMPT
-
-        profile_memory = ""
-        is_outbound = user_id.startswith("sip_")
-        if is_outbound:
-            # Regulatory outbound call greeting: who's calling, why, and how to opt out
-            greeting_text = "Hello, this is Anisha calling from Nexus Pay regarding your PM-SBY scheme renewal. You can reply 'stop' or hang up at any time to opt out."
-            instructions += "\nOUTBOUND CALL COMPLIANCE:\n- Identify yourself as Anisha from Nexus Pay.\n- Inform the user their PM-SBY scheme renewal deadline is approaching.\n- State clearly that they can reply 'stop' or hang up to opt out.\n- If they ask to stop or opt out, execute the `forget_me` tool immediately."
-        elif user_profile and user_profile.get("consent_given"):
-            schemes = user_profile.get("schemes_checked") or "None"
-            elig = user_profile.get("eligibility_status") or "None"
-            profile_memory = f"\nRETURNING USER MEMORY:\n- User Name: {user_name}\n- Last checked schemes: {schemes}\n- Last eligibility: {elig}"
-            instructions += f"{profile_memory}\n- Task: Greet them warmly by name, and follow up directly on their last query."
-            lang = user_profile.get("language_preference", "English").lower()
-            if "hindi" in lang:
-                greeting_text = f"नमस्ते {user_name}, नेक्सस पे में आपका स्वागत है। पिछली बार हमने {schemes} के बारे में बात की थी। आज मैं आपकी क्या सहायता कर सकती हूँ?"
-            else:
-                greeting_text = f"Namaste {user_name}, welcome back to Nexus Pay. Last time we spoke about {schemes}. How can I assist you today?"
-        else:
-            greeting_text = "Hello! I am Anisha from Nexus Pay support. I can help you check transaction charges or block a lost card. How can I help you today?"
-
-        # Create multi-agent instances with shared memory context
-        main_agent = Assistant(instructions=instructions)
-        scheme_specialist = Assistant(
-            instructions=SCHEME_SPECIALIST_PROMPT + profile_memory
-        )
-        loan_specialist = Assistant(
-            instructions=LOAN_SPECIALIST_PROMPT + profile_memory
         )
 
         # Start the session with the Main Agent
