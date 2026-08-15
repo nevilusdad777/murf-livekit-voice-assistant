@@ -1,18 +1,20 @@
-import sys
-import io
-import os
 import asyncio
+import io
+import json
+import logging
+import os
+import sys
+import threading
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 if sys.platform == "win32":
     # Force Windows console to use UTF-8 code page (65001)
     os.system("chcp 65001 >nul 2>&1")
 
-if sys.stdout.encoding.lower() != "utf-8":
+if sys.stdout and hasattr(sys.stdout, "encoding") and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-if sys.stderr.encoding.lower() != "utf-8":
+if sys.stderr and hasattr(sys.stderr, "encoding") and sys.stderr.encoding.lower() != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
-
-import logging
 
 from dotenv import load_dotenv
 from livekit import rtc
@@ -23,12 +25,11 @@ from livekit.agents import (
     JobContext,
     JobProcess,
     cli,
-    tokenize,
-    room_io,
     llm,
+    tokenize,
 )
 from livekit.agents.inference_runner import _InferenceRunner
-from livekit.plugins import murf, silero, google, deepgram, noise_cancellation
+from livekit.plugins import deepgram, google, murf, silero
 
 # ──────────────────────────────────────────────────────────────────────────────
 # WINDOWS FIX: The MultilingualModel turn detector registers a local inference
@@ -134,72 +135,86 @@ CONTINUITY (CRITICAL):
 SYSTEM_PROMPT = MAIN_SYSTEM_PROMPT
 
 
-import threading
-from http.server import SimpleHTTPRequestHandler, HTTPServer
-import json
-
 class TicketHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         super().end_headers()
 
     def do_GET(self):
-        if self.path == '/tickets':
+        if self.path == "/tickets":
             self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
             try:
                 import db
+
                 with db.get_connection() as conn:
-                    rows = conn.execute("SELECT * FROM tickets ORDER BY created_at DESC").fetchall()
+                    rows = conn.execute(
+                        "SELECT * FROM tickets ORDER BY created_at DESC"
+                    ).fetchall()
                     tickets = [dict(r) for r in rows]
-                self.wfile.write(json.dumps(tickets).encode('utf-8'))
+                self.wfile.write(json.dumps(tickets).encode("utf-8"))
             except Exception as e:
-                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
-        elif self.path == '/analytics':
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+        elif self.path == "/analytics":
             self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
             try:
                 import db
+
                 with db.get_connection() as conn:
-                    total = conn.execute("SELECT COUNT(*) as count FROM calls").fetchone()["count"]
-                    successful = conn.execute("SELECT COUNT(*) as count FROM calls WHERE outcome = 'Success'").fetchone()["count"]
-                    failed = conn.execute("SELECT COUNT(*) as count FROM calls WHERE outcome = 'Failed'").fetchone()["count"]
-                    
-                    reasons_rows = conn.execute("SELECT failure_reason, COUNT(*) as count FROM calls WHERE outcome = 'Failed' GROUP BY failure_reason").fetchall()
+                    total = conn.execute(
+                        "SELECT COUNT(*) as count FROM calls"
+                    ).fetchone()["count"]
+                    successful = conn.execute(
+                        "SELECT COUNT(*) as count FROM calls WHERE outcome = 'Success'"
+                    ).fetchone()["count"]
+                    failed = conn.execute(
+                        "SELECT COUNT(*) as count FROM calls WHERE outcome = 'Failed'"
+                    ).fetchone()["count"]
+
+                    reasons_rows = conn.execute(
+                        "SELECT failure_reason, COUNT(*) as count FROM calls WHERE outcome = 'Failed' GROUP BY failure_reason"
+                    ).fetchall()
                     reasons = {r["failure_reason"]: r["count"] for r in reasons_rows}
-                    
-                    history_rows = conn.execute("SELECT * FROM calls ORDER BY start_time DESC LIMIT 10").fetchall()
+
+                    history_rows = conn.execute(
+                        "SELECT * FROM calls ORDER BY start_time DESC LIMIT 10"
+                    ).fetchall()
                     history = [dict(h) for h in history_rows]
-                    
+
                 data = {
                     "total": total,
                     "successful": successful,
                     "failed": failed,
-                    "success_rate": round((successful / total * 100), 1) if total > 0 else 0.0,
+                    "success_rate": round((successful / total * 100), 1)
+                    if total > 0
+                    else 0.0,
                     "reasons": reasons,
-                    "history": history
+                    "history": history,
                 }
-                self.wfile.write(json.dumps(data).encode('utf-8'))
+                self.wfile.write(json.dumps(data).encode("utf-8"))
             except Exception as e:
-                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
 
-    def log_message(self, format, *args):
+    def log_message(self, format_str, *args):
         # Mute logging to keep console clean
         pass
 
+
 def start_http_server():
     try:
-        server = HTTPServer(('127.0.0.1', 8085), TicketHandler)
+        server = HTTPServer(("127.0.0.1", 8085), TicketHandler)
         server.serve_forever()
-    except Exception as e:
+    except Exception:
         pass
+
 
 # Start daemon thread immediately
 api_thread = threading.Thread(target=start_http_server, daemon=True)
@@ -224,12 +239,12 @@ server.setup_fnc = prewarm
 @server.rtc_session(agent_name="my-agent")
 async def my_agent(ctx: JobContext):
     from datetime import datetime
-    
+
     # Call tracking variables
     call_id = ctx.room.name or "Web-Call"
     start_time_dt = datetime.now()
     start_time_str = start_time_dt.isoformat()
-    
+
     checked_rates = False
     saved_profile = False
     escalated = False
@@ -297,11 +312,10 @@ async def my_agent(ctx: JobContext):
         )
         async def forget_me() -> str:
             import json
+
             db.delete_user(user_id)
             try:
-                payload = json.dumps({
-                    "type": "forget_user"
-                }).encode("utf-8")
+                payload = json.dumps({"type": "forget_user"}).encode("utf-8")
                 await ctx.room.local_participant.publish_data(payload)
             except Exception as e:
                 logger.warning(f"Failed to publish forget_user event: {e}")
@@ -313,9 +327,8 @@ async def my_agent(ctx: JobContext):
         async def get_exchange_rates() -> str:
             nonlocal checked_rates
             checked_rates = True
-            import urllib.request
             import json
-            from datetime import datetime
+            import urllib.request
 
             url = "https://open.er-api.com/v6/latest/INR"
             try:
@@ -323,84 +336,111 @@ async def my_agent(ctx: JobContext):
                 def fetch():
                     with urllib.request.urlopen(url, timeout=4) as response:
                         return json.loads(response.read().decode())
-                
+
                 data = await asyncio.to_thread(fetch)
                 if data.get("result") == "success":
                     base_rates = data.get("rates", {})
                     # The API rates are relative to INR (e.g. 1 INR = 0.012 USD).
                     # We invert them to show how many INR for 1 unit of foreign currency.
-                    usd = round(1 / base_rates["USD"], 2) if "USD" in base_rates else 83.45
-                    eur = round(1 / base_rates["EUR"], 2) if "EUR" in base_rates else 90.12
-                    gbp = round(1 / base_rates["GBP"], 2) if "GBP" in base_rates else 106.30
-                    aed = round(1 / base_rates["AED"], 2) if "AED" in base_rates else 22.72
-                    cad = round(1 / base_rates["CAD"], 2) if "CAD" in base_rates else 61.15
-                    
+                    usd = (
+                        round(1 / base_rates["USD"], 2)
+                        if "USD" in base_rates
+                        else 83.45
+                    )
+                    eur = (
+                        round(1 / base_rates["EUR"], 2)
+                        if "EUR" in base_rates
+                        else 90.12
+                    )
+                    gbp = (
+                        round(1 / base_rates["GBP"], 2)
+                        if "GBP" in base_rates
+                        else 106.30
+                    )
+                    aed = (
+                        round(1 / base_rates["AED"], 2)
+                        if "AED" in base_rates
+                        else 22.72
+                    )
+                    cad = (
+                        round(1 / base_rates["CAD"], 2)
+                        if "CAD" in base_rates
+                        else 61.15
+                    )
+
                     date_str = data.get("time_last_update_utc", "Today")
                     # Clean up date representation
                     if " +" in date_str:
                         date_str = date_str.split(" +")[0]
-                    
+
                     rates_dict = {
                         "USD": usd,
                         "EUR": eur,
                         "GBP": gbp,
                         "AED": aed,
-                        "CAD": cad
+                        "CAD": cad,
                     }
-                    
+
                     # Push data packet to the room to update UI
                     try:
-                        payload = json.dumps({
-                            "type": "exchange_rates",
-                            "rates": rates_dict,
-                            "date": date_str,
-                            "fallback": False
-                        }).encode("utf-8")
+                        payload = json.dumps(
+                            {
+                                "type": "exchange_rates",
+                                "rates": rates_dict,
+                                "date": date_str,
+                                "fallback": False,
+                            }
+                        ).encode("utf-8")
                         await ctx.room.local_participant.publish_data(payload)
                     except Exception as e:
                         logger.warning(f"Failed to publish exchange rates to room: {e}")
-                        
+
                     return f"Live rates as of {date_str}: 1 USD = {usd} INR, 1 EUR = {eur} INR, 1 GBP = {gbp} INR, 1 AED = {aed} INR, 1 CAD = {cad} INR."
             except Exception as e:
                 logger.error(f"Error fetching live exchange rates: {e}", exc_info=True)
-                
+
             # Fallback path if API is offline or times out
             fallback_rates = {
                 "USD": 83.45,
                 "EUR": 90.12,
                 "GBP": 106.30,
                 "AED": 22.72,
-                "CAD": 61.15
+                "CAD": 61.15,
             }
             fallback_date = "August 10, 2026 (Offline Fallback)"
-            
+
             try:
-                payload = json.dumps({
-                    "type": "exchange_rates",
-                    "rates": fallback_rates,
-                    "date": fallback_date,
-                    "fallback": True
-                }).encode("utf-8")
+                payload = json.dumps(
+                    {
+                        "type": "exchange_rates",
+                        "rates": fallback_rates,
+                        "date": fallback_date,
+                        "fallback": True,
+                    }
+                ).encode("utf-8")
                 await ctx.room.local_participant.publish_data(payload)
             except Exception as ex:
-                logger.warning(f"Failed to publish fallback exchange rates to room: {ex}")
-                
-            return f"The live rates server is currently offline. Using cached rates from yesterday (August 9, 2026): 1 USD = 83.45 INR, 1 EUR = 90.12 INR, 1 GBP = 106.30 INR, 1 AED = 22.72 INR, 1 CAD = 61.15 INR."
+                logger.warning(
+                    f"Failed to publish fallback exchange rates to room: {ex}"
+                )
+
+            return "The live rates server is currently offline. Using cached rates from yesterday (August 9, 2026): 1 USD = 83.45 INR, 1 EUR = 90.12 INR, 1 GBP = 106.30 INR, 1 AED = 22.72 INR, 1 CAD = 61.15 INR."
 
         @llm.function_tool(
             description="Create a human escalation request when the user reports potential fraud, requires a decision the agent cannot make (like loan/account disputes), or asks to speak with a human supervisor. Do NOT call this tool unless the user has explicitly given permission first."
         )
         async def create_escalation(
             summary: str,
-            urgency: str, # 'Low', 'Medium', 'High', 'Emergency'
-            followup_method: str, # 'Phone Call', 'Email', 'App Notification'
+            urgency: str,  # 'Low', 'Medium', 'High', 'Emergency'
+            followup_method: str,  # 'Phone Call', 'Email', 'App Notification'
         ) -> str:
             nonlocal escalated
             escalated = True
             import random
             from datetime import datetime
+
             ticket_id = f"BP-{random.randint(1000, 9999)}"
-            
+
             # Write to local SQLite database
             db.create_ticket(
                 ticket_id=ticket_id,
@@ -409,9 +449,9 @@ async def my_agent(ctx: JobContext):
                 summary=summary,
                 urgency=urgency,
                 language="English",
-                followup_method=followup_method
+                followup_method=followup_method,
             )
-            
+
             # Broadcast LiveKit data packet
             ticket_data = {
                 "type": "ticket_created",
@@ -421,42 +461,66 @@ async def my_agent(ctx: JobContext):
                 "urgency": urgency,
                 "followup_method": followup_method,
                 "status": "Open",
-                "date": datetime.now().strftime("%I:%M %p")
+                "date": datetime.now().strftime("%I:%M %p"),
             }
             try:
                 payload = json.dumps(ticket_data).encode("utf-8")
                 await ctx.room.local_participant.publish_data(payload)
             except Exception as e:
                 logger.warning(f"Failed to publish ticket packet: {e}")
-                
+
             # Send to Discord Webhook if configured
             webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
             if webhook_url:
                 try:
                     import urllib.request
+
                     discord_payload = {
-                        "embeds": [{
-                            "title": "🚨 New Escalation: Human Help Required",
-                            "color": 16711680 if urgency in ["High", "Emergency"] else 65280,
-                            "fields": [
-                                {"name": "Ticket ID", "value": ticket_id, "inline": True},
-                                {"name": "User Name", "value": user_name, "inline": True},
-                                {"name": "Urgency", "value": urgency, "inline": True},
-                                {"name": "Followup Method", "value": followup_method, "inline": True},
-                                {"name": "Summary", "value": summary}
-                            ],
-                            "footer": {"text": "Nexus Pay Voice Assistant"}
-                        }]
+                        "embeds": [
+                            {
+                                "title": "🚨 New Escalation: Human Help Required",
+                                "color": 16711680
+                                if urgency in ["High", "Emergency"]
+                                else 65280,
+                                "fields": [
+                                    {
+                                        "name": "Ticket ID",
+                                        "value": ticket_id,
+                                        "inline": True,
+                                    },
+                                    {
+                                        "name": "User Name",
+                                        "value": user_name,
+                                        "inline": True,
+                                    },
+                                    {
+                                        "name": "Urgency",
+                                        "value": urgency,
+                                        "inline": True,
+                                    },
+                                    {
+                                        "name": "Followup Method",
+                                        "value": followup_method,
+                                        "inline": True,
+                                    },
+                                    {"name": "Summary", "value": summary},
+                                ],
+                                "footer": {"text": "Nexus Pay Voice Assistant"},
+                            }
+                        ]
                     }
                     req = urllib.request.Request(
                         webhook_url,
                         data=json.dumps(discord_payload).encode("utf-8"),
-                        headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+                        headers={
+                            "Content-Type": "application/json",
+                            "User-Agent": "Mozilla/5.0",
+                        },
                     )
                     await asyncio.to_thread(urllib.request.urlopen, req)
                 except Exception as ex:
                     logger.warning(f"Failed to post to Discord webhook: {ex}")
-                    
+
             return f"Successfully created ticket {ticket_id}. Explain to the user that their support ticket has been registered, and give them the Reference ID: {ticket_id}."
 
         # Define multi-agent transfer tools
@@ -465,7 +529,10 @@ async def my_agent(ctx: JobContext):
         )
         async def transfer_to_schemes_specialist() -> str:
             try:
-                await session.say("I will connect you to our government schemes specialist Ankit. One moment please.", allow_interruptions=False)
+                await session.say(
+                    "I will connect you to our government schemes specialist Ankit. One moment please.",
+                    allow_interruptions=False,
+                )
                 await session.update_agent(scheme_specialist)
                 return "Successfully transferred to Government Schemes Specialist."
             except Exception as e:
@@ -477,7 +544,10 @@ async def my_agent(ctx: JobContext):
         )
         async def transfer_to_loans_specialist() -> str:
             try:
-                await session.say("I will connect you to our loan specialist Rohan. One moment please.", allow_interruptions=False)
+                await session.say(
+                    "I will connect you to our loan specialist Rohan. One moment please.",
+                    allow_interruptions=False,
+                )
                 await session.update_agent(loan_specialist)
                 return "Successfully transferred to Loan & Credit Specialist."
             except Exception as e:
@@ -489,7 +559,10 @@ async def my_agent(ctx: JobContext):
         )
         async def transfer_to_main_agent() -> str:
             try:
-                await session.say("I will transfer you back to our main customer support agent. One moment.", allow_interruptions=False)
+                await session.say(
+                    "I will transfer you back to our main customer support agent. One moment.",
+                    allow_interruptions=False,
+                )
                 await session.update_agent(main_agent)
                 return "Successfully transferred back to Main Customer Support Agent."
             except Exception as e:
@@ -523,7 +596,7 @@ async def my_agent(ctx: JobContext):
         # Compose greeting and instructions
         greeting_text = ""
         instructions = MAIN_SYSTEM_PROMPT
-        
+
         profile_memory = ""
         is_outbound = user_id.startswith("sip_")
         if is_outbound:
@@ -545,21 +618,28 @@ async def my_agent(ctx: JobContext):
 
         # Create multi-agent instances with shared memory context
         main_agent = Assistant(instructions=instructions)
-        scheme_specialist = Assistant(instructions=SCHEME_SPECIALIST_PROMPT + profile_memory)
-        loan_specialist = Assistant(instructions=LOAN_SPECIALIST_PROMPT + profile_memory)
+        scheme_specialist = Assistant(
+            instructions=SCHEME_SPECIALIST_PROMPT + profile_memory
+        )
+        loan_specialist = Assistant(
+            instructions=LOAN_SPECIALIST_PROMPT + profile_memory
+        )
 
         # Start the session with the Main Agent
-        await session.start(
-            agent=main_agent, room=ctx.room
-        )
+        await session.start(agent=main_agent, room=ctx.room)
 
         # Listen for credentials in user speech to flag security violations
         @session.on("user_input_transcribed")
         def on_user_speech(ev):
             nonlocal security_violation
             text = (ev.transcript or "").lower()
-            if any(w in text for w in ["pin", "otp", "password", "cvv", "ओटीपी", "पिन", "पासवर्ड"]):
-                logger.warning(f"🚨 Security guardrail triggered. Credentials detected in transcript: {text}")
+            if any(
+                w in text
+                for w in ["pin", "otp", "password", "cvv", "ओटीपी", "पिन", "पासवर्ड"]
+            ):
+                logger.warning(
+                    f"🚨 Security guardrail triggered. Credentials detected in transcript: {text}"
+                )
                 security_violation = True
 
         # Listen for chat messages sent via data packets
@@ -574,7 +654,8 @@ async def my_agent(ctx: JobContext):
                 message = payload.get("message")
                 if message:
                     logger.info(f"Processing chat message: {message}")
-                    asyncio.create_task(session.run(user_input=message))
+                    _chat_task = asyncio.create_task(session.run(user_input=message))
+                    _ = _chat_task
             except Exception as e:
                 logger.debug(f"Non-chat data packet ignored: {e}")
 
@@ -588,7 +669,7 @@ async def my_agent(ctx: JobContext):
             end_time_str = end_time_dt.isoformat()
             duration = int((end_time_dt - start_time_dt).total_seconds())
             channel = "SIP" if user_id.startswith("sip_") else "Web"
-            
+
             actions_list = []
             if checked_rates:
                 actions_list.append("Checked Rates")
@@ -597,7 +678,7 @@ async def my_agent(ctx: JobContext):
             if escalated:
                 actions_list.append("Escalated")
             actions_taken = ", ".join(actions_list) if actions_list else "None"
-            
+
             if security_violation:
                 outcome = "Failed"
                 failure_reason = "Security Violation"
@@ -610,9 +691,10 @@ async def my_agent(ctx: JobContext):
             else:
                 outcome = "Failed"
                 failure_reason = "Incomplete"
-                
+
             try:
                 import db
+
                 db.create_call(
                     call_id=call_id,
                     user_name=user_name,
@@ -622,9 +704,11 @@ async def my_agent(ctx: JobContext):
                     channel=channel,
                     outcome=outcome,
                     failure_reason=failure_reason,
-                    actions_taken=actions_taken
+                    actions_taken=actions_taken,
                 )
-                logger.info(f"💾 Call record successfully saved to SQLite on close: CallID={call_id}, Outcome={outcome}, Reason={failure_reason}")
+                logger.info(
+                    f"💾 Call record successfully saved to SQLite on close: CallID={call_id}, Outcome={outcome}, Reason={failure_reason}"
+                )
             except Exception as ex:
                 logger.error(f"Failed to record call in SQLite: {ex}")
 
