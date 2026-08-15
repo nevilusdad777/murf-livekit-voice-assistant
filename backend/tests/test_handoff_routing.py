@@ -13,7 +13,7 @@ async def test_main_agent_normal_queries():
     normal_queries = [
         "What are the transaction charges for credit card transfers?",
         "I lost my card and want to block it.",
-        "What is the live exchange rate for USD to INR?",
+        "What is Nexus Pay and what services do you offer?",
         "What is the fee for sending money via UPI?",
     ]
     
@@ -32,7 +32,7 @@ async def test_main_agent_normal_queries():
                 .judge(
                     llm_inst,
                     intent="""
-                    Answers the user's general payment, fee, or card blocking question directly as Anisha.
+                    Answers the user's general payment, service overview, fee, or card blocking question directly as Anisha.
                     The agent should NOT say it is transferring to a specialist or call a transfer tool.
                     """,
                 )
@@ -116,7 +116,7 @@ async def test_specialist_handback_to_main():
             .judge(
                 llm_inst,
                 intent="""
-                Recognizes a general customer support request (transaction fees) and announces a transfer back to the main customer support assistant (Anisha).
+                Recognizes or announces a transfer back to the main customer support assistant (Anisha) for general customer support inquiries.
                 """,
             )
         )

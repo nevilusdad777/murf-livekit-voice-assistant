@@ -222,7 +222,7 @@ api_thread.start()
 
 
 class Assistant(Agent):
-    def __init__(self, instructions: str) -> None:
+    def __init__(self, instructions: str = SYSTEM_PROMPT) -> None:
         super().__init__(instructions=instructions)
 
 
